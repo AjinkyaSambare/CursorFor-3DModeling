@@ -1,0 +1,17 @@
+{
+  "id": "3efd3b24-2b1a-4e53-a830-ca3db9adc875",
+  "prompt": "A circle changing colors from blue to red to green",
+  "library": "manim",
+  "duration": 30,
+  "resolution": "1080p",
+  "status": "completed",
+  "generated_code": "from manim import *\n\nclass ColorChangingCircle(Scene):\n    def construct(self):\n        # Create a circle with an initial blue color\n        circle = Circle(radius=2, color=BLUE)\n        \n        # Add the circle to the scene\n        self.play(Create(circle), run_time=2)\n        \n        # Change the color of the circle to red\n        self.play(circle.animate.set_color(RED), run_time=10)\n        \n        # Change the color of the circle to green\n        self.play(circle.animate.set_color(GREEN), run_time=10)\n        \n        # Pause for a moment at the end\n        self.wait(8)",
+  "video_path": "/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/3efd3b24-2b1a-4e53-a830-ca3db9adc875.mp4",
+  "thumbnail_path": null,
+  "metadata": {
+    "style": {}
+  },
+  "error": null,
+  "created_at": "2025-07-09T18:44:17.746380Z",
+  "updated_at": "2025-07-09T18:45:07.345816Z"
+}

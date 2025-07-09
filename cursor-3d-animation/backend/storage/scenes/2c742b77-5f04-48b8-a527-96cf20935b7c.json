@@ -1,0 +1,17 @@
+{
+  "id": "2c742b77-5f04-48b8-a527-96cf20935b7c",
+  "prompt": "A ball bouncing up and down with realistic physics",
+  "library": "manim",
+  "duration": 10,
+  "resolution": "4K",
+  "status": "completed",
+  "generated_code": "from manim import *\n\nclass BouncingBall(Scene):\n    def construct(self):\n        # Setup: Create the floor and the ball\n        floor = Line(start=LEFT * 6, end=RIGHT * 6, color=WHITE, stroke_width=4).shift(DOWN * 3)\n        ball = Circle(radius=0.4, color=BLUE, fill_opacity=1).move_to(UP * 3)\n\n        # Add the floor and ball to the scene\n        self.add(floor, ball)\n\n        # Animation: Ball bouncing up and down\n        bounces = [\n            (DOWN * 2.6, 0.8),  # First bounce (fall to floor)\n            (UP * 2, 0.6),      # First rebound (rise)\n            (DOWN * 2.6, 0.6),  # Second bounce (fall to floor)\n            (UP * 1.4, 0.5),    # Second rebound (rise)\n            (DOWN * 2.6, 0.5),  # Third bounce (fall to floor)\n            (UP * 0.8, 0.4),    # Third rebound (rise)\n            (DOWN * 2.6, 0.4),  # Final fall to floor\n        ]\n\n        for position, run_time in bounces:\n            self.play(ball.animate.move_to(position), rate_func=smooth, run_time=run_time)\n\n        # Let the ball rest on the floor for a moment\n        self.wait(1)",
+  "video_path": "/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/2c742b77-5f04-48b8-a527-96cf20935b7c.mp4",
+  "thumbnail_path": null,
+  "metadata": {
+    "style": {}
+  },
+  "error": null,
+  "created_at": "2025-07-09T19:03:07.783334Z",
+  "updated_at": "2025-07-09T19:03:22.476081Z"
+}

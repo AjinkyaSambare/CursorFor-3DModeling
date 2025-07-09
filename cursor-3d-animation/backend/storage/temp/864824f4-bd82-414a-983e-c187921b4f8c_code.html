@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Circle to Square Animation</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.min.js"></script>
+  <script>
+    // Scene setup
+    const scene = new THREE.Scene();
+
+    // Camera setup
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 2, 5); // Move camera back to view the animation
+
+    // Renderer setup
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // OrbitControls for camera interaction
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; // Smooth camera motion
+
+    // Lighting setup
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Soft white light
+    scene.add(ambientLight);
+
+    const pointLight = new THREE.PointLight(0xffffff, 1);
+    pointLight.position.set(10, 10, 10);
+    scene.add(pointLight);
+
+    // Material for objects
+    const material = new THREE.MeshStandardMaterial({
+      color: 0x0077ff,
+      roughness: 0.5,
+      metalness: 0.1
+    });
+
+    // Geometry setup: Circle
+    const circleGeometry = new THREE.CircleGeometry(1, 64); // Circle with many segments for smoothness
+    const circleMesh = new THREE.Mesh(circleGeometry, material);
+    scene.add(circleMesh);
+
+    // Geometry setup: Square
+    const squareGeometry = new THREE.BoxGeometry(2, 2, 0.1); // Flat square
+    const squareMesh = new THREE.Mesh(squareGeometry, material);
+    squareMesh.visible = false; // Initially hidden
+    scene.add(squareMesh);
+
+    // Animation variables
+    const animationDuration = 5000; // 5 seconds
+    const startTime = performance.now();
+
+    // Animation loop
+    function animate() {
+      const elapsedTime = performance.now() - startTime;
+      const progress = Math.min(elapsedTime / animationDuration, 1); // Progress from 0 to 1
+
+      // Morphing logic: Interpolate between circle and square
+      if (progress < 0.5) {
+        // First half: Circle shrinks into square dimensions
+        const scaleFactor = THREE.MathUtils.lerp(1, 0, progress * 2); // Scale down circle
+        circleMesh.scale.set(scaleFactor, scaleFactor, 1);
+      } else {
+        // Second half: Square appears scaled up
+        const scaleFactor = THREE.MathUtils.lerp(0, 1, (progress - 0.5) * 2); // Scale up square
+        circleMesh.visible = false; // Hide circle
+        squareMesh.visible = true; // Show square
+        squareMesh.scale.set(scaleFactor, scaleFactor, 1);
+      }
+
+      // Rotate objects for visual interest
+      circleMesh.rotation.y += 0.01;
+      squareMesh.rotation.y += 0.01;
+
+      controls.update(); // Update camera controls
+      renderer.render(scene, camera); // Render the scene
+
+      // Continue animation until complete
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    }
+
+    // Start animation
+    animate();
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
