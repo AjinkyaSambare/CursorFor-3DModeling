@@ -123,9 +123,7 @@ interface Scene {
 
 // Animation library options
 const ANIMATION_LIBRARIES = [
-  { value: 'manim', label: 'Manim', description: 'Mathematical animations' },
-  { value: 'threejs', label: 'Three.js', description: '3D web animations' },
-  { value: 'p5js', label: 'p5.js', description: 'Creative coding' },
+  { value: 'manim', label: 'Manim', description: 'Professional educational animations' },
 ];
 
 const DURATIONS = [3, 5, 10, 15, 30];
@@ -159,14 +157,14 @@ const PROMPT_TEMPLATES = [
   },
   {
     title: 'Bouncing Ball',
-    prompt: 'A ball bouncing up and down with realistic physics',
-    library: 'threejs',
+    prompt: 'A colorful circle bouncing up and down with smooth animation',
+    library: 'manim',
     duration: 8,
   },
   {
-    title: 'Floating Cubes',
-    prompt: 'Multiple colorful cubes floating and rotating in space',
-    library: 'threejs',
+    title: 'Rotating Shapes',
+    prompt: 'Multiple colorful geometric shapes rotating around a center point',
+    library: 'manim',
     duration: 12,
   },
 ];
@@ -312,7 +310,7 @@ function SceneCard({ scene }: { scene: Scene }) {
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
           <h3 className="font-semibold text-gray-900 truncate pr-2">
-            {scene.prompt}
+            {scene.original_prompt || scene.prompt}
           </h3>
           <StatusBadge status={scene.status} />
         </div>
@@ -793,7 +791,7 @@ function SceneDetail({ sceneId }: { sceneId: string }) {
       {/* Scene info */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">
-          {fullSceneData?.prompt || 'Animation Scene'}
+          {fullSceneData?.original_prompt || fullSceneData?.prompt || 'Animation Scene'}
         </h1>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1001,10 +999,10 @@ function HomePage() {
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
                 <Code className="w-6 h-6 text-green-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Multiple Libraries</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Professional Quality</h3>
               <p className="text-gray-600">
-                Choose from Manim for mathematical animations, Three.js for 3D web graphics, 
-                or p5.js for creative coding projects.
+                Powered by Manim, the same library used by 3Blue1Brown for creating 
+                professional educational animations with mathematical precision.
               </p>
             </div>
 
@@ -1082,7 +1080,7 @@ function HomePage() {
                   </div>
                   <div className="p-4">
                     <h3 className="font-semibold text-gray-900 mb-2 truncate">
-                      {scene.prompt}
+                      {scene.original_prompt || scene.prompt}
                     </h3>
                     <div className="flex items-center justify-between">
                       <StatusBadge status={scene.status} />

@@ -5,9 +5,7 @@ from enum import Enum
 import uuid
 
 class AnimationLibrary(str, Enum):
-    THREEJS = "threejs"
     MANIM = "manim"
-    P5JS = "p5js"
 
 class SceneStatus(str, Enum):
     PENDING = "pending"
@@ -29,7 +27,7 @@ class Resolution(str, Enum):
 
 class SceneRequest(BaseModel):
     prompt: str = Field(..., description="Natural language description of the scene")
-    library: Optional[AnimationLibrary] = AnimationLibrary.THREEJS
+    library: Optional[AnimationLibrary] = AnimationLibrary.MANIM
     duration: Optional[int] = Field(5, ge=1, le=30, description="Scene duration in seconds")
     resolution: Optional[Resolution] = Resolution.FULL_HD
     style: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Custom styling options")

@@ -13,7 +13,7 @@ export default function CreateScene() {
   
   const [formData, setFormData] = useState<SceneRequest>({
     prompt: searchParams.get('prompt') || '',
-    library: AnimationLibrary.THREEJS,
+    library: AnimationLibrary.MANIM,
     duration: 5,
     resolution: Resolution.FULL_HD,
   });
@@ -35,9 +35,7 @@ export default function CreateScene() {
   };
 
   const libraryOptions = [
-    { value: AnimationLibrary.THREEJS, label: 'Three.js (3D Graphics)' },
     { value: AnimationLibrary.MANIM, label: 'Manim (Mathematical)' },
-    { value: AnimationLibrary.P5JS, label: 'p5.js (Creative Coding)' },
   ];
 
   const resolutionOptions = [

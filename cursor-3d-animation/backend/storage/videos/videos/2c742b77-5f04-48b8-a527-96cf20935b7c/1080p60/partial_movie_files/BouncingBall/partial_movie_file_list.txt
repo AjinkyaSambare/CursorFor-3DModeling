@@ -1,9 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/2c742b77-5f04-48b8-a527-96cf20935b7c/1080p60/partial_movie_files/BouncingBall/3529212410_1394421303_1950920276.mp4'
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/2c742b77-5f04-48b8-a527-96cf20935b7c/1080p60/partial_movie_files/BouncingBall/3040924799_118663578_1950920276.mp4'
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/2c742b77-5f04-48b8-a527-96cf20935b7c/1080p60/partial_movie_files/BouncingBall/3040924799_281425623_1950920276.mp4'
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/2c742b77-5f04-48b8-a527-96cf20935b7c/1080p60/partial_movie_files/BouncingBall/3040924799_3050205727_1950920276.mp4'
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/2c742b77-5f04-48b8-a527-96cf20935b7c/1080p60/partial_movie_files/BouncingBall/3040924799_2958398203_1950920276.mp4'
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/2c742b77-5f04-48b8-a527-96cf20935b7c/1080p60/partial_movie_files/BouncingBall/3040924799_593155960_1950920276.mp4'
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/2c742b77-5f04-48b8-a527-96cf20935b7c/1080p60/partial_movie_files/BouncingBall/3040924799_639674342_1950920276.mp4'
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/2c742b77-5f04-48b8-a527-96cf20935b7c/1080p60/partial_movie_files/BouncingBall/3040924799_1839128356_3256477619.mp4'

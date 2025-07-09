@@ -1,5 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/3efd3b24-2b1a-4e53-a830-ca3db9adc875/1080p60/partial_movie_files/ColorChangingCircle/3529212410_1121994876_223132457.mp4'
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/3efd3b24-2b1a-4e53-a830-ca3db9adc875/1080p60/partial_movie_files/ColorChangingCircle/3040924799_2151002824_4067896256.mp4'
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/3efd3b24-2b1a-4e53-a830-ca3db9adc875/1080p60/partial_movie_files/ColorChangingCircle/3040924799_52609293_4067896256.mp4'
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/3efd3b24-2b1a-4e53-a830-ca3db9adc875/1080p60/partial_movie_files/ColorChangingCircle/3040924799_2923658479_2428697784.mp4'

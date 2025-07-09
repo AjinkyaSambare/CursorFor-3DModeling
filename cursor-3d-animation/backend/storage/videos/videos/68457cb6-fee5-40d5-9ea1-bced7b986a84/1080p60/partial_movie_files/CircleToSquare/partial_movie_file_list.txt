@@ -1,5 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/68457cb6-fee5-40d5-9ea1-bced7b986a84/1080p60/partial_movie_files/CircleToSquare/3529212410_620549768_223132457.mp4'
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/68457cb6-fee5-40d5-9ea1-bced7b986a84/1080p60/partial_movie_files/CircleToSquare/3040924799_1839128356_914573683.mp4'
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/68457cb6-fee5-40d5-9ea1-bced7b986a84/1080p60/partial_movie_files/CircleToSquare/3040924799_3508886407_1503646932.mp4'
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/68457cb6-fee5-40d5-9ea1-bced7b986a84/1080p60/partial_movie_files/CircleToSquare/3040924799_1839128356_3354658172.mp4'

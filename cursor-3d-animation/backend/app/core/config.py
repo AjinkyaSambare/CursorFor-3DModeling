@@ -42,8 +42,8 @@ class Settings(BaseSettings):
     SUPPORTED_RESOLUTIONS: List[str] = ["720p", "1080p", "4K"]
     
     # Animation Libraries
-    DEFAULT_ANIMATION_LIBRARY: str = "threejs"
-    SUPPORTED_LIBRARIES: List[str] = ["threejs", "manim", "p5js"]
+    DEFAULT_ANIMATION_LIBRARY: str = "manim"
+    SUPPORTED_LIBRARIES: List[str] = ["manim"]
     
     # Video Export
     DEFAULT_FPS: int = 60

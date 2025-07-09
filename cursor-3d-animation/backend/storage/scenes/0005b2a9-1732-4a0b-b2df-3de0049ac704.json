@@ -1,0 +1,18 @@
+{
+  "id": "0005b2a9-1732-4a0b-b2df-3de0049ac704",
+  "prompt": "A vibrant purple circle appears at the center of the screen and begins to bounce smoothly up and down. As it moves, the circle transitions through a spectrum of colors: starting as purple, changing to blue at the peak of its bounce, then turning green as it descends, and finally shifting to orange at the lowest point before starting the cycle again. This bouncing and color-changing sequence repeats for 8 seconds, with each full bounce cycle lasting 2 seconds. The circle maintains a consistent size throughout the animation, ensuring a visually engaging and colorful display.",
+  "original_prompt": "A colorful circle bouncing up and down with smooth animation",
+  "library": "manim",
+  "duration": 8,
+  "resolution": "1080p",
+  "status": "completed",
+  "generated_code": "from manim import *\n\nclass BouncingColorChangingCircle(Scene):\n    def construct(self):\n        # Create a circle at the center of the screen\n        circle = Circle(radius=1, color=PURPLE, fill_opacity=1)\n        circle.move_to(ORIGIN)\n\n        # Define the bounce and color change animations\n        def bounce_and_color_change(circle, duration):\n            # Define the upward and downward movements\n            bounce_up = circle.animate.shift(UP * 2).set_color(BLUE).set_fill(color=BLUE)\n            bounce_down = circle.animate.shift(DOWN * 4).set_color(ORANGE).set_fill(color=ORANGE)\n            bounce_back_up = circle.animate.shift(UP * 2).set_color(GREEN).set_fill(color=GREEN)\n            # Combine animations for a full bounce cycle\n            return [\n                bounce_up,\n                bounce_down,\n                bounce_back_up\n            ]\n\n        # Create animation sequences\n        for _ in range(4):  # 4 cycles, each lasting 2 seconds\n            self.play(*bounce_and_color_change(circle, duration=2))\n\n        self.wait(1)  # Pause at the end",
+  "video_path": "/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/0005b2a9-1732-4a0b-b2df-3de0049ac704.mp4",
+  "thumbnail_path": null,
+  "metadata": {
+    "style": {}
+  },
+  "error": null,
+  "created_at": "2025-07-09T20:21:07.450077Z",
+  "updated_at": "2025-07-09T20:22:52.735851Z"
+}

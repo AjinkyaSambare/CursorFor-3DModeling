@@ -100,7 +100,7 @@ export default function SceneCard({ scene }: SceneCardProps) {
 
         {/* Prompt */}
         <p className="text-sm text-gray-700 mb-3 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-          {scene.prompt}
+          {scene.original_prompt || scene.prompt}
         </p>
 
         {/* Meta Info */}

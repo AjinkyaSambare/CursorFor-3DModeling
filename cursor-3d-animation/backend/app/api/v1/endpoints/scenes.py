@@ -153,9 +153,7 @@ async def get_scene_code(scene_id: str):
     
     # Determine file extension based on library
     ext_map = {
-        "threejs": "html",
-        "manim": "py",
-        "p5js": "html"
+        "manim": "py"
     }
     
     extension = ext_map.get(scene.library, "txt")

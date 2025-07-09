@@ -85,18 +85,4 @@ async def get_prompt_suggestions():
             "A yellow dot moving in a spiral pattern",
             "Two circles merging into one larger circle"
         ],
-        "threejs": [
-            "A metallic cube rotating in 3D space with dramatic lighting",
-            "A sphere bouncing with realistic physics and shadows",
-            "Multiple geometric shapes floating in a 3D environment",
-            "A particle system creating a galaxy effect",
-            "A wireframe model transforming into a solid object"
-        ],
-        "p5js": [
-            "Colorful particles following mouse movement with trails",
-            "A kaleidoscope pattern with changing colors",
-            "Waves of dots moving across the screen",
-            "Interactive circles that respond to clicks",
-            "A fractal tree growing with branching patterns"
-        ]
     }

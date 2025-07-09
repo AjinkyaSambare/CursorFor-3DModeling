@@ -40,33 +40,3 @@ class SimpleRenderService:
         logger.info(f"Scene {scene.id} rendered to {video_path}")
         return str(video_path)
     
-    def _wrap_threejs_code(self, code: str, duration: int) -> str:
-        """Wrap Three.js code with proper HTML structure"""
-        if "<html>" in code.lower() or "<!doctype" in code.lower():
-            return code
-        
-        return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js Animation</title>
-    <style>
-        body {{ margin: 0; padding: 0; overflow: hidden; background: #000; }}
-        canvas {{ display: block; }}
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-</head>
-<body>
-    <script>
-        {code}
-        
-        // Auto-stop after duration
-        setTimeout(() => {{
-            if (window.animationId) {{
-                cancelAnimationFrame(window.animationId);
-            }}
-        }}, {duration * 1000});
-    </script>
-</body>
-</html>"""

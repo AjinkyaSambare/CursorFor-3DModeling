@@ -1,3 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/79e126a6-add4-43e4-8222-a6d4bf32b4d9/1080p60/partial_movie_files/SpinningCube/3529212410_3519191862_3029541406.mp4'
-file 'file:/Users/Ajinkya25/Documents/Projects/3D-Modeling/cursor-3d-animation/backend/storage/videos/videos/79e126a6-add4-43e4-8222-a6d4bf32b4d9/1080p60/partial_movie_files/SpinningCube/3040924799_1754310298_2818861879.mp4'

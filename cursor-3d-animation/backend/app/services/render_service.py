@@ -24,83 +24,10 @@ class RenderService:
     
     async def render_scene(self, scene: Scene) -> str:
         """Render a scene to video based on its library type"""
-        if scene.library == AnimationLibrary.THREEJS:
-            return await self._render_threejs(scene)
-        elif scene.library == AnimationLibrary.MANIM:
+        if scene.library == AnimationLibrary.MANIM:
             return await self._render_manim(scene)
-        elif scene.library == AnimationLibrary.P5JS:
-            return await self._render_p5js(scene)
         else:
             raise ValueError(f"Unsupported library: {scene.library}")
-    
-    async def _render_threejs(self, scene: Scene) -> str:
-        """Render Three.js scene using headless Chrome"""
-        # Create temporary HTML file
-        temp_id = str(uuid.uuid4())
-        html_path = self.temp_dir / f"{temp_id}.html"
-        video_path = self.videos_dir / f"{scene.id}.mp4"
-        
-        try:
-            # Write HTML file
-            with open(html_path, 'w') as f:
-                f.write(self._wrap_threejs_code(scene.generated_code, scene.duration))
-            
-            # Use puppeteer or playwright to capture video
-            # For now, we'll use a simplified approach
-            capture_script = f"""
-const puppeteer = require('puppeteer');
-const {{ record }} = require('puppeteer-screen-recorder');
-
-(async () => {{
-  const browser = await puppeteer.launch({{
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  }});
-  
-  const page = await browser.newPage();
-  await page.setViewport({{ width: 1920, height: 1080 }});
-  
-  const recorder = new record(page, {{
-    followNewTab: false,
-    fps: 60,
-    videoFrame: {{ width: 1920, height: 1080 }},
-    aspectRatio: '16:9',
-  }});
-  
-  await page.goto('file://{html_path}', {{ waitUntil: 'networkidle0' }});
-  await recorder.start('{video_path}');
-  
-  // Wait for animation duration
-  await page.waitForTimeout({scene.duration * 1000});
-  
-  await recorder.stop();
-  await browser.close();
-}})();
-"""
-            
-            # Save capture script
-            script_path = self.temp_dir / f"{temp_id}_capture.js"
-            with open(script_path, 'w') as f:
-                f.write(capture_script)
-            
-            # Run capture script
-            process = await asyncio.create_subprocess_exec(
-                "node", str(script_path),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await process.communicate()
-            
-            if process.returncode != 0:
-                raise RuntimeError(f"Video capture failed: {stderr.decode()}")
-            
-            return str(video_path)
-            
-        finally:
-            # Cleanup temp files
-            if html_path.exists():
-                html_path.unlink()
     
     async def _render_manim(self, scene: Scene) -> str:
         """Render Manim scene"""
@@ -151,44 +78,6 @@ const {{ record }} = require('puppeteer-screen-recorder');
             if script_path.exists():
                 script_path.unlink()
     
-    async def _render_p5js(self, scene: Scene) -> str:
-        """Render p5.js scene using headless browser"""
-        # Similar to Three.js approach
-        return await self._render_threejs(scene)  # Reuse for now
-    
-    def _wrap_threejs_code(self, code: str, duration: int) -> str:
-        """Wrap Three.js code with recording setup"""
-        # If code is already a complete HTML file, return as is
-        if "<html>" in code.lower() or "<!doctype" in code.lower():
-            return code
-        
-        # Otherwise, wrap it
-        return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js Animation</title>
-    <style>
-        body {{ margin: 0; padding: 0; overflow: hidden; }}
-        canvas {{ display: block; }}
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-</head>
-<body>
-    <script>
-        {code}
-        
-        // Auto-stop after duration
-        setTimeout(() => {{
-            if (window.animationId) {{
-                cancelAnimationFrame(window.animationId);
-            }}
-        }}, {duration * 1000});
-    </script>
-</body>
-</html>"""
 
 class VideoProcessor:
     """Process and combine multiple videos"""

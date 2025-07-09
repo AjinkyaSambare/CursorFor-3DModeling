@@ -11,7 +11,7 @@ export default function HomePage() {
     {
       icon: Code2,
       title: 'Multiple Libraries',
-      description: 'Support for Three.js, Manim, and p5.js to create diverse animation styles.',
+      description: 'Support for Manim to create mathematical and educational animations.',
     },
     {
       icon: Play,
@@ -105,8 +105,8 @@ export default function HomePage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-8 mt-16 text-center">
         <div>
-          <div className="text-4xl font-bold text-gray-900">3</div>
-          <div className="text-gray-600 mt-1">Animation Libraries</div>
+          <div className="text-4xl font-bold text-gray-900">1</div>
+          <div className="text-gray-600 mt-1">Animation Library</div>
         </div>
         <div>
           <div className="text-4xl font-bold text-gray-900">60</div>

@@ -9,7 +9,6 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent))
 
 from app.main import app
-from app.workers.scene_worker import job_queue
 from app.core.config import settings
 
 logging.basicConfig(
@@ -18,9 +17,6 @@ logging.basicConfig(
 )
 
 async def main():
-    # Start background workers
-    await job_queue.start_workers()
-    
     # Run the server
     config = uvicorn.Config(
         app,

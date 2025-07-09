@@ -1,7 +1,5 @@
 export enum AnimationLibrary {
-  THREEJS = "threejs",
-  MANIM = "manim",
-  P5JS = "p5js"
+  MANIM = "manim"
 }
 
 export enum SceneStatus {
