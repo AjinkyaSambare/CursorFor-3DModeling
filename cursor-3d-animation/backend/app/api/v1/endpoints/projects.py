@@ -3,10 +3,12 @@ from fastapi.responses import FileResponse
 from typing import List
 import logging
 import uuid
+from pathlib import Path
 
 from app.models.scene import Project, ProjectRequest, ExportRequest
 from app.services.scene_service import ProjectService, SceneService
 from app.services.render_service_simple import SimpleRenderService
+from app.services.export_service import export_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -136,17 +138,17 @@ async def export_video(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
         
-        # Get video paths for all scenes
+        # Get video paths for all scenes in order
         for scene_id in project.scenes:
             scene = await scene_service.get_scene(scene_id)
-            if scene and scene.video_path:
+            if scene and scene.video_path and Path(scene.video_path).exists():
                 scene_paths.append(scene.video_path)
     
     elif request.scene_ids:
         # Export specific scenes
         for scene_id in request.scene_ids:
             scene = await scene_service.get_scene(scene_id)
-            if scene and scene.video_path:
+            if scene and scene.video_path and Path(scene.video_path).exists():
                 scene_paths.append(scene.video_path)
     
     else:
@@ -158,15 +160,66 @@ async def export_video(
     if not scene_paths:
         raise HTTPException(
             status_code=400,
-            detail="No valid scenes found for export"
+            detail="No valid scenes found for export. Make sure all scenes are completed."
         )
     
-    # TODO: Implement actual export logic
-    # For now, return a placeholder response
-    export_id = str(uuid.uuid4())
+    # Create export job
+    try:
+        project_name = "animation"
+        if request.project_id:
+            project_name = project.name
+        
+        export_id = await export_service.create_export_job(
+            scene_paths=scene_paths,
+            project_name=project_name,
+            output_format=request.format,
+            resolution=request.resolution,
+            include_transitions=request.include_transitions,
+            transition_duration=request.transition_duration
+        )
+        
+        return {
+            "export_id": export_id,
+            "status": "processing",
+            "message": f"Exporting {len(scene_paths)} scenes with {'transitions' if request.include_transitions else 'no transitions'}"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to create export job: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to start export: {str(e)}"
+        )
+
+@router.get("/export/{export_id}/status", response_model=dict)
+async def get_export_status(export_id: str):
+    """Get the status of an export job"""
+    status = await export_service.get_export_status(export_id)
     
-    return {
-        "export_id": export_id,
-        "status": "processing",
-        "message": f"Exporting {len(scene_paths)} scenes"
-    }
+    if "error" in status:
+        raise HTTPException(status_code=404, detail=status["error"])
+    
+    return status
+
+@router.get("/export/{export_id}/download")
+async def download_export(export_id: str):
+    """Download a completed export"""
+    file_path = export_service.get_export_file_path(export_id)
+    
+    if not file_path:
+        raise HTTPException(
+            status_code=404, 
+            detail="Export not found or not completed"
+        )
+    
+    if not Path(file_path).exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Export file not found"
+        )
+    
+    return FileResponse(
+        file_path,
+        media_type="video/mp4",
+        filename=f"export_{export_id}.mp4"
+    )

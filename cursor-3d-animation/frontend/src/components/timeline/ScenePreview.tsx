@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Film, Clock, Eye } from 'lucide-react';
+import { Film, Clock, Eye, AlertTriangle, CheckCircle } from 'lucide-react';
 import { sceneApi } from '../../services/api';
 
 // Inline types
@@ -19,6 +19,8 @@ interface Scene {
   updated_at: string;
 }
 
+
+
 interface ScenePreviewProps {
   scenes: Scene[];
   currentTime: number;
@@ -33,6 +35,7 @@ export default function ScenePreview({
   onSceneSelect,
 }: ScenePreviewProps) {
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
+  const [videoHealth, setVideoHealth] = useState<{[key: string]: any}>({});
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Find which scene should be playing at current time
@@ -56,10 +59,28 @@ export default function ScenePreview({
     if (displayScene?.video_path) {
       const videoUrl = sceneApi.getVideoUrl(displayScene.id);
       setPreviewVideoUrl(videoUrl);
+      
+      // Check video health
+      checkVideoHealth(displayScene.id);
     } else {
       setPreviewVideoUrl(null);
     }
   }, [displayScene?.id]);
+
+  const checkVideoHealth = async (sceneId: string) => {
+    try {
+      const health = await sceneApi.checkHealth(sceneId);
+      setVideoHealth(prev => ({
+        ...prev,
+        [sceneId]: health
+      }));
+    } catch (error) {
+      setVideoHealth(prev => ({
+        ...prev,
+        [sceneId]: { valid: false, status: 'error', message: 'Health check failed' }
+      }));
+    }
+  };
 
   // Sync video time with timeline
   useEffect(() => {
@@ -90,6 +111,18 @@ export default function ScenePreview({
                 <Eye className="w-3 h-3 mr-1" />
                 {displayScene.resolution}
               </span>
+              {videoHealth[displayScene.id] && (
+                <span className="flex items-center">
+                  {videoHealth[displayScene.id].valid ? (
+                    <CheckCircle className="w-3 h-3 mr-1 text-green-500" />
+                  ) : (
+                    <AlertTriangle className="w-3 h-3 mr-1 text-red-500" />
+                  )}
+                  <span className={videoHealth[displayScene.id].valid ? 'text-green-400' : 'text-red-400'}>
+                    {videoHealth[displayScene.id].valid ? 'Valid' : 'Invalid'}
+                  </span>
+                </span>
+              )}
             </div>
           </div>
         ) : (
@@ -114,8 +147,25 @@ export default function ScenePreview({
           <div className="flex flex-col items-center justify-center text-gray-500 space-y-3">
             <Film className="w-16 h-16" />
             <p className="text-sm text-center">
-              {displayScene ? 'Video not available' : 'Select a scene to preview'}
+              {displayScene ? (
+                displayScene.status === 'completed' ? 
+                  'Video not available' : 
+                  `Scene is ${displayScene.status.replace('_', ' ')}`
+              ) : 'Select a scene to preview'}
             </p>
+            {displayScene && displayScene.status !== 'completed' && (
+              <div className="text-xs text-gray-400 text-center">
+                {displayScene.status === 'processing' && 'Scene is being processed...'}
+                {displayScene.status === 'failed' && 'Scene generation failed'}
+                {displayScene.status === 'generating_code' && 'Generating animation code...'}
+                {displayScene.status === 'rendering' && 'Rendering video...'}
+              </div>
+            )}
+            {displayScene && videoHealth[displayScene.id] && !videoHealth[displayScene.id].valid && (
+              <div className="text-xs text-red-400 text-center bg-red-900/20 px-3 py-1 rounded">
+                ⚠️ {videoHealth[displayScene.id].message}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -197,10 +247,22 @@ export default function ScenePreview({
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="truncate font-medium">
-                      {index + 1}. {scene.prompt}
-                    </span>
-                    <span className="ml-2 text-gray-400">
+                    <div className="flex items-center flex-1 min-w-0">
+                      <span className="truncate font-medium flex-1">
+                        {index + 1}. {scene.prompt}
+                      </span>
+                      {videoHealth[scene.id] && !videoHealth[scene.id].valid && (
+                        <AlertTriangle className="w-3 h-3 ml-1 text-red-400 flex-shrink-0" />
+                      )}
+                      {scene.status !== 'completed' && (
+                        <div className={`w-2 h-2 rounded-full ml-1 flex-shrink-0 ${
+                          scene.status === 'failed' ? 'bg-red-500' :
+                          scene.status === 'processing' || scene.status === 'rendering' ? 'bg-yellow-500 animate-pulse' :
+                          'bg-gray-500'
+                        }`} />
+                      )}
+                    </div>
+                    <span className="ml-2 text-gray-400 flex-shrink-0">
                       {scene.duration}s
                     </span>
                   </div>

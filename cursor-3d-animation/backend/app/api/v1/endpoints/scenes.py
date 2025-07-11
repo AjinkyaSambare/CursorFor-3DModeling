@@ -10,6 +10,7 @@ from app.models.scene import (
 )
 from app.services.scene_service import SceneService
 from app.services.prompt_enhancement_service import PromptEnhancementService
+from app.services.export_service import export_service
 from app.workers.scene_worker import job_queue
 
 router = APIRouter()
@@ -209,3 +210,45 @@ async def regenerate_scene(
         original_prompt=scene.original_prompt,
         enhanced_prompt=scene.prompt if scene.original_prompt else None
     )
+
+@router.get("/{scene_id}/health", response_model=dict)
+async def check_scene_health(scene_id: str):
+    """Check the health and validity of a scene's video"""
+    try:
+        scene = await scene_service.get_scene(scene_id)
+        
+        if not scene:
+            raise HTTPException(status_code=404, detail="Scene not found")
+        
+        if not scene.video_path:
+            return {
+                "scene_id": scene_id,
+                "status": "no_video",
+                "message": "Scene has no video file",
+                "valid": False
+            }
+        
+        if not Path(scene.video_path).exists():
+            return {
+                "scene_id": scene_id,
+                "status": "file_missing",
+                "message": "Video file not found on disk",
+                "valid": False
+            }
+        
+        # Validate video content
+        validation_result = await export_service._validate_video_content(scene.video_path)
+        
+        return {
+            "scene_id": scene_id,
+            "status": "healthy" if validation_result["valid"] else "invalid",
+            "message": "Video is valid" if validation_result["valid"] else validation_result.get("error", "Unknown error"),
+            "valid": validation_result["valid"],
+            "video_info": validation_result if validation_result["valid"] else None
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error checking scene health {scene_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")

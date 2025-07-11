@@ -3,9 +3,13 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, ZoomIn, ZoomOut, Download } from 'lucide-react';
 import { useProject } from '../hooks/useProjects';
 import { useScenes } from '../hooks/useScenes';
+import { projectApi, sceneApi } from '../services/api';
 import TimelineCanvas from '../components/timeline/TimelineCanvas';
 import PlaybackControls from '../components/timeline/PlaybackControls';
 import ScenePreview from '../components/timeline/ScenePreview';
+import ExportModal from '../components/export/ExportModal';
+import ExportProgress from '../components/export/ExportProgress';
+import toast from 'react-hot-toast';
 
 // Inline types
 interface Scene {
@@ -30,6 +34,9 @@ export default function TimelineEditorPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showExportProgress, setShowExportProgress] = useState(false);
+  const [currentExportId, setCurrentExportId] = useState<string | null>(null);
   
   const { data: project, isLoading: projectLoading } = useProject(projectId!);
   const { data: scenesData } = useScenes();
@@ -63,9 +70,74 @@ export default function TimelineEditorPage() {
     setCurrentTime(time);
   };
 
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    console.log('Export functionality coming soon');
+  const handleExport = async () => {
+    // Check if all scenes are completed
+    const incompleteScenes = projectScenes.filter(scene => scene.status !== 'completed');
+    if (incompleteScenes.length > 0) {
+      toast.error(`${incompleteScenes.length} scenes are still processing. Please wait for all scenes to complete before exporting.`);
+      return;
+    }
+    
+    // Check if any scenes don't have video files
+    const scenesWithoutVideo = projectScenes.filter(scene => !scene.video_path);
+    if (scenesWithoutVideo.length > 0) {
+      toast.error(`${scenesWithoutVideo.length} scenes don't have video files. Please regenerate these scenes.`);
+      return;
+    }
+    
+    // Advanced validation: check video health
+    toast.loading('Validating scene videos...');
+    let validationFailed = false;
+    
+    for (const scene of projectScenes) {
+      try {
+        const health = await sceneApi.checkHealth(scene.id);
+        if (!health.valid) {
+          toast.error(`Scene "${scene.prompt.substring(0, 30)}..." has invalid video: ${health.message}`);
+          validationFailed = true;
+          break;
+        }
+      } catch (error) {
+        toast.error(`Failed to validate scene "${scene.prompt.substring(0, 30)}..."`);
+        validationFailed = true;
+        break;
+      }
+    }
+    
+    toast.dismiss();
+    
+    if (validationFailed) {
+      toast.error('Please fix scene issues before exporting.');
+      return;
+    }
+    
+    toast.success('All scenes validated successfully!');
+    setShowExportModal(true);
+  };
+
+  const handleExportStart = async (config: any) => {
+    try {
+      const exportRequest = {
+        project_id: projectId,
+        format: config.format,
+        resolution: config.resolution,
+        include_transitions: config.includeTransitions,
+        transition_duration: config.transitionDuration
+      };
+      
+      const response = await projectApi.exportProject(exportRequest);
+      
+      setCurrentExportId(response.export_id);
+      setShowExportModal(false);
+      setShowExportProgress(true);
+      toast.success('Export started successfully!');
+    } catch (error) {
+      toast.error('Failed to start export. Please try again.');
+    }
+  };
+
+  const handleExportComplete = (downloadUrl: string) => {
+    toast.success('Export completed! Download ready.');
   };
 
   if (projectLoading) {
@@ -95,9 +167,6 @@ export default function TimelineEditorPage() {
     );
   }
 
-  console.log('Project:', project);
-  console.log('Project scenes:', projectScenes);
-  console.log('Total duration:', totalDuration);
 
   // Show empty state if no scenes
   if (projectScenes.length === 0) {
@@ -222,6 +291,25 @@ export default function TimelineEditorPage() {
           </div>
         </div>
       </div>
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExportStart}
+        projectName={project.name}
+        sceneCount={projectScenes.length}
+        totalDuration={totalDuration}
+      />
+
+      {/* Export Progress Modal */}
+      <ExportProgress
+        isOpen={showExportProgress}
+        onClose={() => setShowExportProgress(false)}
+        exportId={currentExportId || ''}
+        projectName={project.name}
+        onComplete={handleExportComplete}
+      />
     </div>
   );
 }

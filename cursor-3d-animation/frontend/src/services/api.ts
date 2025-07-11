@@ -45,6 +45,31 @@ interface ProjectRequest {
   scenes?: string[];
 }
 
+interface ExportRequest {
+  project_id?: string;
+  scene_ids?: string[];
+  format?: 'mp4' | 'webm';
+  resolution?: '720p' | '1080p' | '4K';
+  include_transitions?: boolean;
+  transition_duration?: number;
+}
+
+interface ExportResponse {
+  export_id: string;
+  status: string;
+  message: string;
+}
+
+interface ExportStatus {
+  export_id: string;
+  status: 'pending' | 'processing' | 'combining' | 'finalizing' | 'completed' | 'failed';
+  progress: number;
+  error_message?: string;
+  created_at: string;
+  completed_at?: string;
+  download_url?: string;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
@@ -89,6 +114,11 @@ export const sceneApi = {
   getCode: async (sceneId: string): Promise<any> => {
     const { data } = await api.get(`/scenes/${sceneId}/code`);
     return data;
+  },
+
+  checkHealth: async (sceneId: string): Promise<any> => {
+    const { data } = await api.get(`/scenes/${sceneId}/health`);
+    return data;
   }
 };
 
@@ -131,6 +161,24 @@ export const projectApi = {
   reorderScenes: async (projectId: string, sceneIds: string[]): Promise<Project> => {
     const { data } = await api.post(`/projects/${projectId}/reorder-scenes`, sceneIds);
     return data;
+  },
+
+  // Export functionality
+  exportProject: async (request: ExportRequest): Promise<ExportResponse> => {
+    const { data } = await api.post('/projects/export', request);
+    return data;
+  },
+
+  getExportStatus: async (exportId: string): Promise<ExportStatus> => {
+    const { data } = await api.get(`/projects/export/${exportId}/status`);
+    return data;
+  },
+
+  downloadExport: async (exportId: string): Promise<Blob> => {
+    const response = await api.get(`/projects/export/${exportId}/download`, {
+      responseType: 'blob'
+    });
+    return response.data;
   }
 };
 
