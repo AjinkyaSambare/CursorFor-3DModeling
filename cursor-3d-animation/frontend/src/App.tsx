@@ -6,6 +6,8 @@ import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import ScenesPage from './pages/ScenesPage';
 import ProjectsPage from './pages/ProjectsPage';
+import ProjectDetailPage from './pages/ProjectDetailPage';
+import TimelineEditorPage from './pages/TimelineEditorPage';
 import CreateScene from './pages/CreateScene';
 
 const queryClient = new QueryClient({
@@ -21,14 +23,37 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/create" element={<CreateScene />} />
-            <Route path="/scenes" element={<ScenesPage />} />
-            <Route path="/projects" element={<ProjectsPage />} />
-          </Routes>
-        </Layout>
+        <Routes>
+          {/* Timeline editor without layout wrapper for full-screen experience */}
+          <Route path="/projects/:projectId/timeline" element={<TimelineEditorPage />} />
+          
+          {/* All other routes with layout wrapper */}
+          <Route path="/" element={
+            <Layout>
+              <HomePage />
+            </Layout>
+          } />
+          <Route path="/create" element={
+            <Layout>
+              <CreateScene />
+            </Layout>
+          } />
+          <Route path="/scenes" element={
+            <Layout>
+              <ScenesPage />
+            </Layout>
+          } />
+          <Route path="/projects" element={
+            <Layout>
+              <ProjectsPage />
+            </Layout>
+          } />
+          <Route path="/projects/:projectId" element={
+            <Layout>
+              <ProjectDetailPage />
+            </Layout>
+          } />
+        </Routes>
       </Router>
       
       <Toaster

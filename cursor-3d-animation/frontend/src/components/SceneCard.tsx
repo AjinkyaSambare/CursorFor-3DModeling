@@ -1,9 +1,35 @@
 import { useState } from 'react';
-import { Scene, SceneStatus } from '../types';
 import { Play, Download, Trash2, RefreshCw, Clock, Film } from 'lucide-react';
 import { sceneApi } from '../services/api';
 import { useDeleteScene, useRegenerateScene } from '../hooks/useScenes';
 import clsx from 'clsx';
+
+// Inline types
+interface Scene {
+  id: string;
+  prompt: string;
+  library: string;
+  duration: number;
+  resolution: string;
+  status: string;
+  generated_code?: string;
+  video_path?: string;
+  thumbnail_path?: string;
+  metadata: Record<string, any>;
+  error?: string;
+  created_at: string;
+  updated_at: string;
+  original_prompt?: string;
+}
+
+const SceneStatus = {
+  PENDING: "pending",
+  PROCESSING: "processing",
+  GENERATING_CODE: "generating_code",
+  RENDERING: "rendering",
+  COMPLETED: "completed",
+  FAILED: "failed"
+} as const;
 
 interface SceneCardProps {
   scene: Scene;

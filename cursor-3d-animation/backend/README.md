@@ -20,6 +20,15 @@ cp .env.example .env
 # Edit .env with your API keys
 ```
 
+**Required Environment Variables:**
+- `AZURE_OPENAI_ENDPOINT`: Your Azure OpenAI endpoint URL
+- `AZURE_OPENAI_API_KEY`: Your Azure OpenAI API key  
+- `AZURE_OPENAI_DEPLOYMENT_NAME`: Your deployment name (e.g., gpt-4)
+- `AI_PROVIDER`: Set to "azure" or "openai"
+
+**Optional:**
+- `OPENAI_API_KEY`: If using OpenAI directly instead of Azure
+
 4. Run the server:
 ```bash
 python run.py

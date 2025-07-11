@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Any
 from openai import AzureOpenAI
 
+from app.core.config import settings
 from app.models.scene import AnimationLibrary
 
 logger = logging.getLogger(__name__)
@@ -9,11 +10,11 @@ logger = logging.getLogger(__name__)
 class PromptEnhancementService:
     def __init__(self):
         self.client = AzureOpenAI(
-            azure_endpoint="https://access-01.openai.azure.com",
-            api_key="FXKWeX5juTW9kTgGcv3H3rWladBJZGN3Jm7OWqOdONVtuLqx9gH4JQQJ99AKACfhMk5XJ3w3AAABACOGFVFg",
-            api_version="2025-01-01-preview"
+            azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+            api_key=settings.AZURE_OPENAI_API_KEY,
+            api_version=settings.AZURE_OPENAI_API_VERSION
         )
-        self.deployment_name = "gpt-4"
+        self.deployment_name = settings.AZURE_OPENAI_DEPLOYMENT_NAME
     
     async def enhance_prompt(
         self, 
@@ -54,48 +55,45 @@ class PromptEnhancementService:
         """Get library-specific enhancement system prompt"""
         
         if library == AnimationLibrary.MANIM:
-            return f"""You are an expert Manim animation prompt enhancer. Transform rough user ideas into detailed, precise, and technically accurate animation descriptions that are exactly {duration} seconds long.
+            return f"""You are an expert Manim animation prompt enhancer. Your job is to PRESERVE the user's core concept and requirements while adding technical precision for better animation results.
 
-CRITICAL TECHNICAL REQUIREMENTS:
-- NO LaTeX, MathTex, or Tex elements whatsoever
-- Use ONLY basic geometric shapes: Circle, Square, Rectangle, Triangle, Line, Dot, Arrow
-- All objects must be positioned within video frame boundaries
-- Include specific colors: RED, BLUE, GREEN, YELLOW, PURPLE, ORANGE, WHITE, BLACK
-- Specify exact positioning relative to screen center
-- Define clear timing and duration for each animation phase that sums to {duration} seconds exactly
-- Avoid mathematical notation, equations, or coordinate systems
-- Every animation phase must have precise timing specified
+🎯 CORE PRINCIPLE: NEVER change the user's main idea, concept, or intent. Only add technical details and timing precision.
 
-FRAME POSITIONING GUIDELINES:
-- Center objects using .move_to(ORIGIN) or relative positioning
-- Use .shift(LEFT*2), .shift(RIGHT*2), .shift(UP*2), .shift(DOWN*2) for positioning
-- Keep all elements within visible screen boundaries
-- Group related objects to ensure they animate together smoothly
+ENHANCEMENT APPROACH:
+1. PRESERVE USER INTENT: Keep the exact concept, objects, and story the user described
+2. ADD TECHNICAL PRECISION: Enhance with colors, positioning, timing, and implementation details
+3. MAINTAIN CORE ELEMENTS: Do not substitute, replace, or fundamentally alter what the user requested
+4. ENHANCE, DON'T TRANSFORM: Add details that make the user's vision technically feasible
 
-CRITICAL DURATION TIMING:
-- Animation MUST be exactly {duration} seconds - no approximations
-- Break animation into precise timed phases that sum to {duration} seconds
-- Each phase must have specific duration (e.g., "fade in for 1 second")
-- Include exact wait times between phases
-- Provide timing breakdown: Phase 1 (X seconds) + Wait (Y seconds) + Phase 2 (Z seconds) = {duration} seconds
-- Use smooth transitions: Create, Transform, FadeIn, FadeOut, Write, DrawBorderThenFill
-- Every animation action must specify its exact duration
+TECHNICAL REQUIREMENTS TO ADD (without changing user concept):
+- Specify colors for objects if not mentioned (RED, BLUE, GREEN, YELLOW, PURPLE, ORANGE, WHITE, BLACK)
+- Add positioning details (center, left, right, up, down) if not specified
+- Include precise timing that sums to exactly {duration} seconds
+- Use only basic geometric shapes: Circle, Square, Rectangle, Triangle, Line, Dot, Arrow
+- NO LaTeX, MathTex, or mathematical notation
+- Keep all elements within screen boundaries
 
-DETAILED ENHANCEMENT REQUIREMENTS:
-1. OBJECTS: Define exact shapes, colors, sizes, and initial positions
-2. MOVEMENTS: Specify direction, speed, and exact duration for each movement
-3. TRANSFORMATIONS: Detail what changes into what and how long each transformation takes
-4. TIMING: Break down the animation into precise timed segments that sum to {duration} seconds
-5. COLORS: Assign specific colors to each object and color changes
-6. POSITIONING: Use precise relative positioning (center, left 2 units, etc.)
-7. FLOW: Ensure smooth transitions between animation phases
-8. DURATION BREAKDOWN: Provide exact timing for each phase (e.g., "Phase 1: 1.5 seconds, Wait: 0.5 seconds, Phase 2: 2 seconds")
+TIMING ENHANCEMENT:
+- Break the user's concept into {duration}-second timeline
+- Add specific durations for each action/phase
+- Include wait times between actions if needed
+- Ensure total time = exactly {duration} seconds
 
-EXAMPLE TRANSFORMATIONS WITH PRECISE TIMING:
-- "bouncing ball" → "A bright blue circle (radius 0.5) starts at the top center of the screen. Phase 1 (1 second): Ball drops down with gravity. Phase 2 (0.5 seconds): Ball changes color to red on impact. Phase 3 (1 second): Ball bounces back up. Phase 4 (0.5 seconds): Wait at top. Phase 5 (1 second): Second bounce down. Phase 6 (1 second): Final bounce up and settle. Total: 5 seconds exactly."
-- "rotating shape" → "A green square (side length 1) positioned at screen center. Phase 1 (1.5 seconds): Square rotates clockwise 360 degrees. Phase 2 (0.5 seconds): Square transforms into purple triangle. Phase 3 (1.5 seconds): Triangle continues rotating while changing color to orange. Phase 4 (0.5 seconds): Triangle stops rotation and settles. Total: 4 seconds exactly."
+EXAMPLES OF PROPER ENHANCEMENT:
+❌ BAD: "dog running" → "green square moving left to right" (CHANGED CONCEPT)
+✅ GOOD: "dog running" → "orange dog-shaped figure running from left side to right side of screen. Phase 1 (2s): Dog appears on left. Phase 2 (3s): Dog runs across screen. Total: 5s exactly."
 
-OUTPUT FORMAT: Return only the enhanced prompt description with all technical details included. Must include precise timing breakdown showing how phases sum to {duration} seconds. No explanations or additional text."""
+❌ BAD: "solar system" → "three circles orbiting" (SIMPLIFIED TOO MUCH)
+✅ GOOD: "solar system" → "yellow sun circle at center with blue earth circle and red mars circle orbiting around it. Phase 1 (1s): Planets appear. Phase 2 (4s): Planets orbit sun. Total: 5s exactly."
+
+CRITICAL RULES:
+- If user mentions specific objects, keep them
+- If user mentions specific movements, preserve them
+- If user mentions specific concepts, maintain them
+- Only add technical details the user didn't specify
+- Never replace user's vision with generic shapes unless they specifically asked for shapes
+
+OUTPUT FORMAT: Return only the enhanced prompt with preserved user concept + technical details + {duration}-second timing breakdown."""
 
         else:
             # Default enhancement for unknown libraries
@@ -125,7 +123,7 @@ OUTPUT FORMAT: Return only the enhanced prompt description with precise timing b
         if style:
             style_info = f"Style preferences: {style}\n"
         
-        return f"""ORIGINAL USER PROMPT: "{original_prompt}"
+        return f"""🎯 USER'S ORIGINAL CONCEPT: "{original_prompt}"
 
 ANIMATION SPECIFICATIONS:
 - Library: {library.value}
@@ -133,17 +131,33 @@ ANIMATION SPECIFICATIONS:
 - Resolution: 1920x1080 (HD)
 - Frame Rate: 60 FPS
 {style_info}
-CRITICAL TASK: Transform the original prompt into a comprehensive, frame-aware animation description that includes:
-1. Exact object specifications (shapes, colors, sizes)
-2. Precise positioning within video frame boundaries
-3. DETAILED TIMING BREAKDOWN: Each phase must have exact duration that sums to {duration} seconds
-4. Smooth transition descriptions between phases
-5. Technical implementation details for {library.value}
-6. Duration verification: Phase 1 (X sec) + Phase 2 (Y sec) + ... = {duration} seconds
+🚨 CRITICAL INSTRUCTION: PRESERVE the user's exact concept, objects, and vision. DO NOT change their core idea.
 
-The enhanced prompt MUST include a precise timing breakdown showing how the animation phases add up to exactly {duration} seconds. Every animation action must have a specific duration assigned.
+ENHANCEMENT TASK: Keep the user's original concept exactly as described, but add:
+1. Technical details (colors, sizes, positioning) WHERE NOT SPECIFIED by user
+2. Precise timing breakdown that sums to {duration} seconds
+3. Manim-compatible shape descriptions (Circle, Square, etc.) ONLY if user didn't specify objects
+4. Frame positioning details ONLY if user didn't specify locations
+5. Smooth transitions between the user's described actions
 
-Ensure the enhanced prompt is complete, actionable, and will produce a professional animation that stays within frame boundaries and executes for precisely {duration} seconds."""
+PRESERVE THESE FROM USER'S PROMPT:
+- All specific objects/concepts they mentioned
+- All movements/actions they described  
+- All relationships/interactions they specified
+- The overall story/narrative they intended
+
+ONLY ADD TECHNICAL DETAILS THE USER DIDN'T PROVIDE:
+- Colors (if not mentioned)
+- Exact positioning (if not specified)
+- Timing precision for each phase
+- Shape details (if objects weren't clearly defined)
+
+TIMING REQUIREMENT: Break the user's concept into phases that add up to exactly {duration} seconds.
+
+EXAMPLE:
+User: "cat chasing mouse" 
+✅ GOOD: "Orange cat figure chasing small gray mouse figure across screen. Phase 1 (1s): Cat and mouse appear. Phase 2 (3s): Chase sequence. Phase 3 (1s): Cat catches mouse. Total: {duration}s"
+❌ BAD: "Orange circle chasing blue circle" (lost the user's concept!)"""
     
     def analyze_prompt_quality(self, prompt: str) -> Dict[str, Any]:
         """Analyze prompt quality and suggest improvements"""

@@ -1,7 +1,33 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sceneApi } from '../services/api';
-import { SceneRequest } from '../types';
 import toast from 'react-hot-toast';
+
+// Inline types
+interface SceneRequest {
+  prompt: string;
+  library?: string;
+  duration?: number;
+  resolution?: string;
+  style?: Record<string, any>;
+  use_enhanced_prompt?: boolean;
+}
+
+interface Scene {
+  id: string;
+  prompt: string;
+  original_prompt?: string;
+  library: string;
+  duration: number;
+  resolution: string;
+  status: string;
+  generated_code?: string;
+  video_path?: string;
+  thumbnail_path?: string;
+  metadata: Record<string, any>;
+  error?: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export const useScenes = (page = 1, pageSize = 20) => {
   return useQuery({

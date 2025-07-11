@@ -1,15 +1,35 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Sparkles, Loader2 } from 'lucide-react';
-import { AnimationLibrary, Resolution, SceneRequest } from '../types';
 import { useCreateScene, useScene } from '../hooks/useScenes';
 import ScenePreview from '../components/ScenePreview';
+
+// Inline types
+const AnimationLibrary = {
+  MANIM: "manim"
+} as const;
+
+const Resolution = {
+  HD: "720p",
+  FULL_HD: "1080p",
+  ULTRA_HD: "4K"
+} as const;
+
+interface SceneRequest {
+  prompt: string;
+  library?: string;
+  duration?: number;
+  resolution?: string;
+  style?: Record<string, any>;
+  use_enhanced_prompt?: boolean;
+}
 
 export default function CreateScene() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const createScene = useCreateScene();
   const [currentSceneId, setCurrentSceneId] = useState<string | null>(null);
+  const [enhancePrompt, setEnhancePrompt] = useState(true);
   
   const [formData, setFormData] = useState<SceneRequest>({
     prompt: searchParams.get('prompt') || '',
@@ -27,7 +47,11 @@ export default function CreateScene() {
     e.preventDefault();
     
     try {
-      const response = await createScene.mutateAsync(formData);
+      const requestData = {
+        ...formData,
+        use_enhanced_prompt: enhancePrompt
+      };
+      const response = await createScene.mutateAsync(requestData);
       setCurrentSceneId(response.id);
     } catch (error) {
       console.error('Failed to create scene:', error);
@@ -68,6 +92,25 @@ export default function CreateScene() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 required
               />
+              
+              {/* Auto-enhance checkbox */}
+              <div className="mt-3">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={enhancePrompt}
+                    onChange={(e) => setEnhancePrompt(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <span className="ml-2 text-sm text-gray-600">
+                    <Sparkles className="w-4 h-4 inline mr-1" />
+                    Auto-enhance prompt with AI
+                  </span>
+                </label>
+                <p className="mt-1 text-xs text-gray-500">
+                  Automatically improve your prompt for better animation results
+                </p>
+              </div>
             </div>
 
             {/* Library Selection */}

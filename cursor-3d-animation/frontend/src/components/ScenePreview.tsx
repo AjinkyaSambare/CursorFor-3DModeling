@@ -1,6 +1,24 @@
 import { useState } from 'react';
-import { SceneResponse, SceneStatus } from '../types';
 import { CheckCircle, XCircle, Loader2, Download, Code2, RefreshCw } from 'lucide-react';
+
+// Inline types
+interface SceneResponse {
+  id: string;
+  status: string;
+  message: string;
+  video_url?: string;
+  code?: string;
+  error?: string;
+}
+
+const SceneStatus = {
+  PENDING: "pending",
+  PROCESSING: "processing",
+  GENERATING_CODE: "generating_code",
+  RENDERING: "rendering",
+  COMPLETED: "completed",
+  FAILED: "failed"
+} as const;
 import { sceneApi } from '../services/api';
 import { useRegenerateScene } from '../hooks/useScenes';
 import CodeViewer from './CodeViewer';

@@ -1,11 +1,49 @@
 import axios from 'axios';
-import { 
-  SceneRequest, 
-  SceneResponse, 
-  SceneListResponse, 
-  Project, 
-  ProjectRequest 
-} from '../types/index';
+
+// Temporary inline types to fix import issue
+interface SceneRequest {
+  prompt: string;
+  library?: string;
+  duration?: number;
+  resolution?: string;
+  style?: Record<string, any>;
+  use_enhanced_prompt?: boolean;
+}
+
+interface SceneResponse {
+  id: string;
+  status: string;
+  message: string;
+  video_url?: string;
+  code?: string;
+  error?: string;
+  original_prompt?: string;
+  enhanced_prompt?: string;
+}
+
+interface SceneListResponse {
+  scenes: any[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  scenes: string[];
+  timeline: any[];
+  created_at: string;
+  updated_at: string;
+}
+
+interface ProjectRequest {
+  name: string;
+  description?: string;
+  scenes?: string[];
+}
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
