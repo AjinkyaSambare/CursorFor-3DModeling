@@ -53,6 +53,8 @@ export default function CreateScene() {
       };
       const response = await createScene.mutateAsync(requestData);
       setCurrentSceneId(response.id);
+      
+      // Keep user on create page to watch scene progress
     } catch (error) {
       console.error('Failed to create scene:', error);
     }
@@ -73,9 +75,14 @@ export default function CreateScene() {
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Form Section */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">
-            Create New Animation
-          </h1>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">
+              Create New Animation
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Describe your animation and watch it come to life. You'll see the progress and preview right here.
+            </p>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Prompt Input */}
@@ -195,12 +202,25 @@ export default function CreateScene() {
 
         {/* Preview Section */}
         <div>
-          {currentSceneId && sceneData && (
+          {currentSceneId && sceneData ? (
             <ScenePreview
               scene={sceneData}
               isLoading={sceneLoading}
-              onComplete={() => navigate('/scenes')}
             />
+          ) : (
+            <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+              <div className="space-y-4">
+                <div className="mx-auto h-16 w-16 text-gray-400">
+                  <Sparkles className="h-16 w-16" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Animation Preview
+                </h3>
+                <p className="text-gray-500">
+                  Fill out the form and click "Generate Animation" to see your creation come to life here.
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </div>

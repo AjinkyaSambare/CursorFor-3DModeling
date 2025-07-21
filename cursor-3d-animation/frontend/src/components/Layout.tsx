@@ -1,7 +1,10 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Sparkles, Film, Folder, Plus } from 'lucide-react';
 import clsx from 'clsx';
+import { useAuth } from '../contexts/AuthContext';
+import UserDropdown from './auth/UserDropdown';
+import AuthModal from './auth/AuthModal';
 
 interface LayoutProps {
   children: ReactNode;
@@ -9,12 +12,14 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const { user } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const navigation = [
-    { name: 'Home', href: '/', icon: Sparkles },
-    { name: 'Create', href: '/create', icon: Plus },
-    { name: 'Scenes', href: '/scenes', icon: Film },
-    { name: 'Projects', href: '/projects', icon: Folder },
+    { name: 'Home', href: '/', icon: Sparkles, public: true },
+    { name: 'Create', href: '/create', icon: Plus, public: false },
+    { name: 'Scenes', href: '/scenes', icon: Film, public: false },
+    { name: 'Projects', href: '/projects', icon: Folder, public: false },
   ];
 
   return (
@@ -34,28 +39,45 @@ export default function Layout({ children }: LayoutProps) {
               </Link>
             </div>
 
-            <nav className="flex space-x-1">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.href;
-                
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={clsx(
-                      'flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-gray-900 text-white'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    )}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
-            </nav>
+            <div className="flex items-center space-x-4">
+              {/* Navigation */}
+              <nav className="flex space-x-1">
+                {navigation
+                  .filter(item => item.public || user)
+                  .map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.href;
+                    
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        className={clsx(
+                          'flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                          isActive
+                            ? 'bg-gray-900 text-white'
+                            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                        )}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{item.name}</span>
+                      </Link>
+                    );
+                  })}
+              </nav>
+
+              {/* Auth Section */}
+              {user ? (
+                <UserDropdown />
+              ) : (
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Sign in
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -64,6 +86,13 @@ export default function Layout({ children }: LayoutProps) {
       <main className="flex-1">
         {children}
       </main>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        initialMode="login"
+      />
     </div>
   );
 }

@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, RefreshCw } from 'lucide-react';
 import { useScenes } from '../hooks/useScenes';
+import { useQueryClient } from '@tanstack/react-query';
 import SceneCard from '../components/SceneCard';
 
 export default function ScenesPage() {
   const [page, setPage] = useState(1);
-  const { data, isLoading, isError } = useScenes(page);
+  const { data, isLoading, isError, refetch, isFetching } = useScenes(page);
+  const queryClient = useQueryClient();
+  
+  const handleManualRefresh = () => {
+    refetch();
+  };
 
   if (isLoading) {
     return (
@@ -33,14 +39,32 @@ export default function ScenesPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Animation Scenes</h1>
-        <Link
-          to="/create"
-          className="inline-flex items-center px-4 py-2 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          New Scene
-        </Link>
+        <div className="flex items-center space-x-4">
+          <h1 className="text-3xl font-bold text-gray-900">Animation Scenes</h1>
+          {(isFetching && !isLoading) && (
+            <div className="text-sm text-gray-500 flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 mr-2"></div>
+              Updating...
+            </div>
+          )}
+        </div>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleManualRefresh}
+            disabled={isFetching}
+            className="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+          <Link
+            to="/create"
+            className="inline-flex items-center px-4 py-2 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            New Scene
+          </Link>
+        </div>
       </div>
 
       {/* Scenes Grid */}

@@ -36,6 +36,8 @@ export default function ScenePreview({
 }: ScenePreviewProps) {
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const [videoHealth, setVideoHealth] = useState<{[key: string]: any}>({});
+  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Find which scene should be playing at current time
@@ -56,15 +58,39 @@ export default function ScenePreview({
 
   // Update preview video when scene changes
   useEffect(() => {
-    if (displayScene?.video_path) {
-      const videoUrl = sceneApi.getVideoUrl(displayScene.id);
-      setPreviewVideoUrl(videoUrl);
-      
-      // Check video health
-      checkVideoHealth(displayScene.id);
-    } else {
-      setPreviewVideoUrl(null);
-    }
+    const loadVideoWithAuth = async () => {
+      if (displayScene?.video_path) {
+        setIsLoadingVideo(true);
+        setVideoError(null);
+        setPreviewVideoUrl(null);
+        
+        try {
+          console.log(`Loading video for scene ${displayScene.id}`);
+          
+          // Use authenticated blob URL approach
+          const authenticatedVideoUrl = await sceneApi.getAuthenticatedVideoUrl(displayScene.id);
+          setPreviewVideoUrl(authenticatedVideoUrl);
+          setVideoError(null);
+          
+          // Check video health
+          checkVideoHealth(displayScene.id);
+        } catch (error) {
+          console.error(`Failed to load video for scene ${displayScene.id}:`, error);
+          setPreviewVideoUrl(null);
+          setVideoError(`Failed to load video: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          // Still check health to get proper error message
+          checkVideoHealth(displayScene.id);
+        } finally {
+          setIsLoadingVideo(false);
+        }
+      } else {
+        setPreviewVideoUrl(null);
+        setVideoError(null);
+        setIsLoadingVideo(false);
+      }
+    };
+
+    loadVideoWithAuth();
   }, [displayScene?.id]);
 
   const checkVideoHealth = async (sceneId: string) => {
@@ -132,7 +158,12 @@ export default function ScenePreview({
 
       {/* Video Preview */}
       <div className="flex-1 flex items-center justify-center p-4">
-        {previewVideoUrl ? (
+        {isLoadingVideo ? (
+          <div className="flex flex-col items-center justify-center text-gray-500 space-y-3">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400"></div>
+            <p className="text-sm text-center">Loading video...</p>
+          </div>
+        ) : previewVideoUrl ? (
           <div className="w-full">
             <video
               ref={videoRef}
@@ -141,6 +172,12 @@ export default function ScenePreview({
               controls
               muted
               preload="metadata"
+              onError={(e) => {
+                console.error('Video playback error:', e);
+                setVideoError('Video playback failed');
+              }}
+              onLoadStart={() => console.log('Video loading started')}
+              onCanPlay={() => console.log('Video can play')}
             />
           </div>
         ) : (
@@ -153,6 +190,14 @@ export default function ScenePreview({
                   `Scene is ${displayScene.status.replace('_', ' ')}`
               ) : 'Select a scene to preview'}
             </p>
+            
+            {/* Show video error if any */}
+            {videoError && (
+              <div className="text-xs text-red-400 text-center bg-red-900/20 px-3 py-1 rounded max-w-full">
+                ⚠️ {videoError}
+              </div>
+            )}
+            
             {displayScene && displayScene.status !== 'completed' && (
               <div className="text-xs text-gray-400 text-center">
                 {displayScene.status === 'processing' && 'Scene is being processed...'}

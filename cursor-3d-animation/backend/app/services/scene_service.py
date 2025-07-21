@@ -9,6 +9,7 @@ import asyncio
 from app.core.config import settings
 from app.models.scene import Scene, SceneStatus, Project
 from app.services.ai_service import get_ai_provider
+from app.services.manim_renderer import ManimRenderer
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ class SceneService:
         self.scenes_dir = settings.SCENES_DIR
         self.videos_dir = settings.VIDEOS_DIR
         self.ai_provider = get_ai_provider()
+        self.manim_renderer = ManimRenderer()
         self._ensure_directories()
     
     def _ensure_directories(self):
@@ -102,6 +104,46 @@ class SceneService:
             "total_pages": (total + page_size - 1) // page_size
         }
     
+    async def list_user_scenes(self, user_id: str, page: int = 1, page_size: int = 20) -> Dict[str, Any]:
+        """List scenes for a specific user with pagination"""
+        scene_files = sorted(
+            self.scenes_dir.glob("*.json"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True
+        )
+        
+        user_scenes = []
+        total_user_scenes = 0
+        
+        # Filter scenes by user_id
+        for scene_file in scene_files:
+            try:
+                async with aiofiles.open(scene_file, 'r') as f:
+                    data = await f.read()
+                    scene = Scene.model_validate_json(data)
+                    
+                    # Check if scene belongs to user (from metadata or future user_id field)
+                    scene_user_id = scene.metadata.get("user_id")
+                    if scene_user_id == user_id:
+                        user_scenes.append(scene)
+                        total_user_scenes += 1
+            except Exception as e:
+                logger.warning(f"Error reading scene file {scene_file}: {e}")
+                continue
+        
+        # Apply pagination
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated_scenes = user_scenes[start:end]
+        
+        return {
+            "scenes": paginated_scenes,
+            "total": total_user_scenes,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total_user_scenes + page_size - 1) // page_size
+        }
+    
     async def delete_scene(self, scene_id: str) -> bool:
         """Delete a scene and its associated files"""
         scene_path = self.scenes_dir / f"{scene_id}.json"
@@ -142,6 +184,51 @@ class SceneService:
             return code
         except Exception as e:
             logger.error(f"Error generating code for scene {scene.id}: {e}")
+            scene.status = SceneStatus.FAILED
+            scene.error = str(e)
+            await self.update_scene(scene)
+            raise
+    
+    async def render_scene(self, scene: Scene) -> Scene:
+        """Render the scene using Manim"""
+        try:
+            # Validate the scene has generated code
+            if not scene.generated_code:
+                raise ValueError("Scene has no generated code to render")
+            
+            # Update status
+            scene.status = SceneStatus.RENDERING
+            await self.update_scene(scene)
+            
+            # Validate the code
+            is_valid, error_msg = self.manim_renderer.validate_scene_code(scene.generated_code)
+            if not is_valid:
+                raise ValueError(f"Invalid Manim code: {error_msg}")
+            
+            # Extract the scene class name from the generated code
+            scene_class_name = self.manim_renderer.extract_scene_class_name(scene.generated_code)
+            
+            # Render the scene
+            success, video_path, error = await self.manim_renderer.render_scene(
+                scene.generated_code,
+                scene_name=scene_class_name
+            )
+            
+            if success and video_path:
+                scene.video_path = video_path
+                scene.status = SceneStatus.COMPLETED
+                scene.error = None
+                logger.info(f"Successfully rendered scene {scene.id}")
+            else:
+                scene.status = SceneStatus.FAILED
+                scene.error = error or "Unknown rendering error"
+                logger.error(f"Failed to render scene {scene.id}: {scene.error}")
+            
+            await self.update_scene(scene)
+            return scene
+            
+        except Exception as e:
+            logger.error(f"Error rendering scene {scene.id}: {e}")
             scene.status = SceneStatus.FAILED
             scene.error = str(e)
             await self.update_scene(scene)
@@ -192,6 +279,27 @@ class ProjectService:
             async with aiofiles.open(project_file, 'r') as f:
                 data = await f.read()
                 projects.append(Project.model_validate_json(data))
+        
+        return projects
+    
+    async def list_user_projects(self, user_id: str) -> List[Project]:
+        """List projects for a specific user"""
+        projects = []
+        
+        for project_file in sorted(self.projects_dir.glob("*.json"), 
+                                   key=lambda p: p.stat().st_mtime, 
+                                   reverse=True):
+            try:
+                async with aiofiles.open(project_file, 'r') as f:
+                    data = await f.read()
+                    project = Project.model_validate_json(data)
+                    
+                    # Only include projects owned by this user
+                    if hasattr(project, 'user_id') and project.user_id == user_id:
+                        projects.append(project)
+            except Exception as e:
+                logger.warning(f"Error reading project file {project_file}: {e}")
+                continue
         
         return projects
     

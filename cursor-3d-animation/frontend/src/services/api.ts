@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { supabase } from '../lib/supabase';
 
 // Temporary inline types to fix import issue
 interface SceneRequest {
@@ -77,7 +78,60 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000, // 10 second timeout
 });
+
+// Add auth interceptor to include JWT token in requests
+api.interceptors.request.use(
+  async (config) => {
+    try {
+      console.log('[API] 📤 Making request to:', config.url);
+      
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('[API] ❌ Session error:', error);
+        return config;
+      }
+      
+      if (session?.access_token) {
+        config.headers.Authorization = `Bearer ${session.access_token}`;
+        console.log('[API] 🔑 Token added for:', config.url);
+      } else {
+        console.log('[API] ⚠️ No token available for:', config.url);
+      }
+      
+      return config;
+    } catch (error) {
+      console.error('[API] ❌ Request interceptor failed:', error);
+      return config;
+    }
+  },
+  (error) => {
+    console.error('[API] ❌ Request interceptor error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => {
+    console.log('[API] ✅ Success:', response.config.url, response.status);
+    return response;
+  },
+  (error) => {
+    const status = error.response?.status;
+    const url = error.config?.url;
+    
+    console.log(`[API] ❌ Error: ${url} - ${status} ${error.response?.statusText || error.message}`);
+    
+    if (status === 401) {
+      console.warn('[API] 🔐 Unauthorized - token may be invalid');
+    }
+    
+    return Promise.reject(error);
+  }
+);
 
 // Scene API
 export const sceneApi = {
@@ -109,6 +163,30 @@ export const sceneApi = {
 
   getVideoUrl: (sceneId: string): string => {
     return `${API_BASE_URL}/api/v1/scenes/${sceneId}/video`;
+  },
+
+  getVideoBlob: async (sceneId: string): Promise<string> => {
+    try {
+      const response = await api.get(`/scenes/${sceneId}/video`, {
+        responseType: 'blob',
+        timeout: 30000, // 30 second timeout for video loading
+      });
+      return URL.createObjectURL(response.data);
+    } catch (error) {
+      console.error(`[API] Failed to get video blob for scene ${sceneId}:`, error);
+      throw error;
+    }
+  },
+
+  // New method for getting authenticated video URL using blob approach
+  getAuthenticatedVideoUrl: async (sceneId: string): Promise<string> => {
+    try {
+      console.log(`[API] Getting authenticated video URL for scene ${sceneId}`);
+      return await sceneApi.getVideoBlob(sceneId);
+    } catch (error) {
+      console.error(`[API] Failed to get authenticated video URL for scene ${sceneId}:`, error);
+      throw error;
+    }
   },
 
   getCode: async (sceneId: string): Promise<any> => {
@@ -191,6 +269,61 @@ export const healthApi = {
 
   ready: async (): Promise<any> => {
     const { data } = await api.get('/health/ready');
+    return data;
+  }
+};
+
+// Profile interfaces
+interface UserProfile {
+  id: string;
+  display_name?: string;
+  avatar_url?: string;
+  preferences: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ProfileUpdateRequest {
+  display_name?: string;
+  preferences?: Record<string, any>;
+}
+
+interface AvatarUploadResponse {
+  avatar_url: string;
+  message: string;
+}
+
+// Auth API (for additional backend auth endpoints)
+export const authApi = {
+  getProfile: async (): Promise<UserProfile> => {
+    const { data } = await api.get('/auth/profile');
+    return data;
+  },
+
+  updateProfile: async (updates: ProfileUpdateRequest): Promise<UserProfile> => {
+    const { data } = await api.put('/auth/profile', updates);
+    return data;
+  },
+
+  deleteProfile: async (): Promise<{ message: string }> => {
+    const { data } = await api.delete('/auth/profile');
+    return data;
+  },
+
+  uploadAvatar: async (file: File): Promise<AvatarUploadResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const { data } = await api.post('/auth/profile/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  },
+
+  getMe: async (): Promise<any> => {
+    const { data } = await api.get('/auth/me');
     return data;
   }
 };

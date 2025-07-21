@@ -55,6 +55,16 @@ class Settings(BaseSettings):
     JOB_TIMEOUT: int = 300  # 5 minutes
     CLEANUP_INTERVAL: int = 3600  # 1 hour
     
+    # Supabase Configuration
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_ANON_KEY: Optional[str] = None
+    SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
+    
+    # JWT Configuration
+    JWT_SECRET_KEY: Optional[str] = None
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

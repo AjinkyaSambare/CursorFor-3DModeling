@@ -82,8 +82,8 @@ function SceneBlock({ scene, startTime, zoom, isSelected, onClick }: SceneBlockP
         </div>
       </div>
       
-      {/* Thumbnail overlay */}
-      {scene.video_path && (
+      {/* Thumbnail overlay - disabled for now to avoid auth issues */}
+      {scene.video_path && false && (
         <div className="absolute inset-0 rounded-lg overflow-hidden opacity-20">
           <video
             src={sceneApi.getVideoUrl(scene.id)}

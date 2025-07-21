@@ -4,14 +4,12 @@ from typing import Optional
 
 from app.models.scene import Scene, SceneStatus
 from app.services.scene_service import SceneService
-from app.services.video_renderer import VideoRenderer
 
 logger = logging.getLogger(__name__)
 
 class SceneWorker:
     def __init__(self):
         self.scene_service = SceneService()
-        self.render_service = VideoRenderer()
         self.processing = False
         self.current_scene_id: Optional[str] = None
     
@@ -38,17 +36,9 @@ class SceneWorker:
             
             code = await self.scene_service.generate_scene_code(scene)
             
-            # Render scene
+            # Render scene using the new Manim renderer
             logger.info(f"Rendering scene {scene_id}")
-            scene.status = SceneStatus.RENDERING
-            await self.scene_service.update_scene(scene)
-            
-            video_path = await self.render_service.render_scene(scene)
-            
-            # Update scene with result
-            scene.status = SceneStatus.COMPLETED
-            scene.video_path = video_path
-            await self.scene_service.update_scene(scene)
+            scene = await self.scene_service.render_scene(scene)
             
             logger.info(f"Successfully processed scene {scene_id}")
             

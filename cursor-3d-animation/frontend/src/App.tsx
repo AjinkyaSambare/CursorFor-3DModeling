@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster } from 'react-hot-toast';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import ScenesPage from './pages/ScenesPage';
@@ -9,6 +10,8 @@ import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import TimelineEditorPage from './pages/TimelineEditorPage';
 import CreateScene from './pages/CreateScene';
+import UserProfile from './pages/UserProfile';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,39 +25,60 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <Routes>
-          {/* Timeline editor without layout wrapper for full-screen experience */}
-          <Route path="/projects/:projectId/timeline" element={<TimelineEditorPage />} />
-          
-          {/* All other routes with layout wrapper */}
-          <Route path="/" element={
-            <Layout>
-              <HomePage />
-            </Layout>
-          } />
-          <Route path="/create" element={
-            <Layout>
-              <CreateScene />
-            </Layout>
-          } />
-          <Route path="/scenes" element={
-            <Layout>
-              <ScenesPage />
-            </Layout>
-          } />
-          <Route path="/projects" element={
-            <Layout>
-              <ProjectsPage />
-            </Layout>
-          } />
-          <Route path="/projects/:projectId" element={
-            <Layout>
-              <ProjectDetailPage />
-            </Layout>
-          } />
-        </Routes>
-      </Router>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            {/* Public home page */}
+            <Route path="/" element={
+              <Layout>
+                <HomePage />
+              </Layout>
+            } />
+            
+            {/* Protected routes */}
+            <Route path="/create" element={
+              <ProtectedRoute>
+                <Layout>
+                  <CreateScene />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/scenes" element={
+              <ProtectedRoute>
+                <Layout>
+                  <ScenesPage />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/projects" element={
+              <ProtectedRoute>
+                <Layout>
+                  <ProjectsPage />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/projects/:projectId" element={
+              <ProtectedRoute>
+                <Layout>
+                  <ProjectDetailPage />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/projects/:projectId/timeline" element={
+              <ProtectedRoute>
+                <TimelineEditorPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Layout>
+                  <UserProfile />
+                </Layout>
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </Router>
+      </AuthProvider>
       
       <Toaster
         position="bottom-right"
