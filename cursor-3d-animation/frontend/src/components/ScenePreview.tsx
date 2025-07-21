@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { CheckCircle, XCircle, Loader2, Download, Code2, RefreshCw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CheckCircle, XCircle, Loader2, Download, Code2, RefreshCw, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Inline types
 interface SceneResponse {
@@ -29,9 +30,92 @@ interface ScenePreviewProps {
   onComplete?: () => void;
 }
 
+// Video Player component with authenticated blob URL
+function VideoPlayer({ sceneId, scene }: { sceneId: string; scene: SceneResponse }) {
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
+
+  const loadVideoWithRetry = async (attempt = 1) => {
+    if (hasAttemptedLoad && videoUrl) {
+      console.log(`[VideoPlayer] Video already loaded, skipping`);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError(null);
+      setHasAttemptedLoad(true);
+      console.log(`[VideoPlayer] Loading video for scene ${sceneId}, attempt ${attempt}`);
+      const blobUrl = await sceneApi.getAuthenticatedVideoUrl(sceneId);
+      setVideoUrl(blobUrl);
+      setLoading(false);
+      console.log(`[VideoPlayer] Video loaded successfully for scene ${sceneId}`);
+    } catch (err) {
+      console.error(`[VideoPlayer] Video load attempt ${attempt} failed:`, err);
+      if (attempt < 3 && scene.status === 'completed') {
+        console.log(`[VideoPlayer] Retrying video load in ${attempt} seconds...`);
+        setLoading(false);
+        setTimeout(() => loadVideoWithRetry(attempt + 1), 1000 * attempt);
+      } else {
+        setError(`Failed to load video after ${attempt} attempts`);
+        setLoading(false);
+        setHasAttemptedLoad(false); // Reset so user can try again
+      }
+    }
+  };
+
+  useEffect(() => {
+    console.log(`[VideoPlayer] Scene updated - Status: ${scene.status}, Video URL exists: ${!!scene.video_url}, Current videoUrl: ${!!videoUrl}, Loading: ${loading}, HasAttempted: ${hasAttemptedLoad}`);
+    
+    // Only attempt to load video when scene is completed and has video_url
+    if (scene.status === 'completed' && scene.video_url && !videoUrl && !loading && !hasAttemptedLoad) {
+      console.log(`[VideoPlayer] Scene completed with video URL, loading video...`);
+      loadVideoWithRetry();
+    }
+  }, [scene.status, scene.video_url, sceneId, videoUrl, loading, hasAttemptedLoad]);
+
+  // Separate useEffect for cleanup
+  useEffect(() => {
+    return () => {
+      if (videoUrl) {
+        console.log(`[VideoPlayer] Cleaning up video URL on unmount`);
+        URL.revokeObjectURL(videoUrl);
+      }
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="w-full aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600"></div>
+      </div>
+    );
+  }
+
+  if (error || !videoUrl) {
+    return (
+      <div className="w-full aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
+        <p className="text-gray-500">{error || 'Video not available'}</p>
+      </div>
+    );
+  }
+
+  return (
+    <video
+      controls
+      className="w-full rounded-lg shadow-md"
+      src={videoUrl}
+      onError={() => setError('Video playback failed')}
+    />
+  );
+}
+
 export default function ScenePreview({ scene, isLoading, onComplete }: ScenePreviewProps) {
   const [showCode, setShowCode] = useState(false);
   const regenerateScene = useRegenerateScene();
+  const navigate = useNavigate();
 
   const getStatusIcon = () => {
     switch (scene.status) {
@@ -63,13 +147,24 @@ export default function ScenePreview({ scene, isLoading, onComplete }: ScenePrev
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (scene.video_url) {
-      const link = document.createElement('a');
-      link.href = sceneApi.getVideoUrl(scene.id);
-      link.download = `animation_${scene.id}.mp4`;
-      link.click();
+      try {
+        const blobUrl = await sceneApi.getVideoBlob(scene.id);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `animation_${scene.id}.mp4`;
+        link.click();
+        // Clean up the blob URL after download
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+      } catch (error) {
+        console.error('Failed to download video:', error);
+      }
     }
+  };
+
+  const handleViewAllScenes = () => {
+    navigate('/scenes');
   };
 
   const handleRegenerate = () => {
@@ -128,27 +223,35 @@ export default function ScenePreview({ scene, isLoading, onComplete }: ScenePrev
         {/* Video Preview */}
         {scene.status === SceneStatus.COMPLETED && scene.video_url && (
           <div className="mt-6">
-            <video
-              controls
-              className="w-full rounded-lg shadow-md"
-              src={sceneApi.getVideoUrl(scene.id)}
-            />
+            <VideoPlayer sceneId={scene.id} scene={scene} />
             
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={handleDownload}
-                className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download
-              </button>
+            <div className="space-y-3 mt-4">
+              {/* Primary Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleDownload}
+                  className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </button>
+                
+                <button
+                  onClick={() => setShowCode(!showCode)}
+                  className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-900 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  <Code2 className="w-4 h-4 mr-2" />
+                  {showCode ? 'Hide' : 'View'} Code
+                </button>
+              </div>
               
+              {/* Navigation Action */}
               <button
-                onClick={() => setShowCode(!showCode)}
-                className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-900 rounded-lg hover:bg-gray-200 transition-colors"
+                onClick={handleViewAllScenes}
+                className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                <Code2 className="w-4 h-4 mr-2" />
-                {showCode ? 'Hide' : 'View'} Code
+                <span>View All Scenes</span>
+                <ArrowRight className="w-4 h-4 ml-2" />
               </button>
             </div>
           </div>

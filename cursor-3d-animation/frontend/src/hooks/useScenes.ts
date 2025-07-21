@@ -33,6 +33,21 @@ export const useScenes = (page = 1, pageSize = 20) => {
   return useQuery({
     queryKey: ['scenes', page, pageSize],
     queryFn: () => sceneApi.list(page, pageSize),
+    refetchInterval: (data) => {
+      // Smart polling based on scene statuses
+      const scenes = data?.scenes || [];
+      const hasProcessingScenes = scenes.some(scene => 
+        ['pending', 'processing', 'generating_code', 'rendering'].includes(scene.status)
+      );
+      
+      if (hasProcessingScenes) {
+        return 3000; // Poll every 3 seconds when scenes are processing
+      }
+      
+      return 15000; // Poll every 15 seconds to check for new scenes
+    },
+    refetchIntervalInBackground: true, // Keep polling for new scenes even in background
+    refetchOnWindowFocus: true, // Refresh when user returns to tab
   });
 };
 
@@ -49,7 +64,42 @@ export const useScene = (sceneId: string, enabled = true) => {
           status === 'generating_code' || status === 'rendering') {
         return 2000; // Poll every 2 seconds
       }
+      // Continue polling for a few more times after completion to ensure video_url is populated
+      if (status === 'completed' && !data.video_url) {
+        return 3000; // Poll every 3 seconds when completed but no video_url yet
+      }
       return false;
+    },
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+  });
+};
+
+// Hook for real-time scene status updates in scene cards
+export const useSceneStatusUpdates = (scene: Scene) => {
+  const queryClient = useQueryClient();
+  
+  return useQuery({
+    queryKey: ['scene-status', scene.id],
+    queryFn: () => sceneApi.get(scene.id),
+    enabled: ['pending', 'processing', 'generating_code', 'rendering'].includes(scene.status),
+    refetchInterval: ['pending', 'processing', 'generating_code', 'rendering'].includes(scene.status) ? 2000 : false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    onSuccess: (updatedSceneData) => {
+      // Update the scenes list cache with the new status
+      queryClient.setQueryData(['scenes'], (oldData: any) => {
+        if (!oldData) return oldData;
+        
+        return {
+          ...oldData,
+          scenes: oldData.scenes.map((s: Scene) => 
+            s.id === scene.id ? { ...s, ...updatedSceneData } : s
+          )
+        };
+      });
+      
+      // Scene status updated in cache
     },
   });
 };
@@ -59,9 +109,14 @@ export const useCreateScene = () => {
   
   return useMutation({
     mutationFn: (request: SceneRequest) => sceneApi.create(request),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalidate scenes list to show new scene immediately
       queryClient.invalidateQueries({ queryKey: ['scenes'] });
-      toast.success('Scene generation started!');
+      toast.success('Scene generation started! Watch the progress in the preview below.');
+      // Scene created successfully
+      
+      // Return the scene data for navigation purposes
+      return data;
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.detail || 'Failed to create scene');

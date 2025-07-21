@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Download, CheckCircle, XCircle, Loader2, X } from 'lucide-react';
+import { projectApi } from '../../services/api';
 
 interface ExportProgressProps {
   isOpen: boolean;
@@ -34,21 +35,7 @@ export default function ExportProgress({
 
     const checkStatus = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const url = `${API_BASE_URL}/api/v1/projects/export/${exportId}/status`;
-        
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to check export status`);
-        }
-        
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Server returned non-JSON response');
-        }
-        
-        const data = await response.json();
+        const data = await projectApi.getExportStatus(exportId);
         setStatus(data);
 
         // Call onComplete when export is finished
@@ -56,7 +43,7 @@ export default function ExportProgress({
           onComplete(data.download_url);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Export failed');
+        setError(err instanceof Error ? err.message : 'Failed to check export status');
       }
     };
 
@@ -113,13 +100,7 @@ export default function ExportProgress({
     if (!status?.download_url) return;
     
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const downloadUrl = `${API_BASE_URL}/api/v1/projects/export/${exportId}/download`;
-      
-      const response = await fetch(downloadUrl);
-      if (!response.ok) throw new Error('Download failed');
-      
-      const blob = await response.blob();
+      const blob = await projectApi.downloadExport(exportId);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
