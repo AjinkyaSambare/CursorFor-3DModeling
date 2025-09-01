@@ -59,16 +59,28 @@ class SceneWorker:
 # Simple in-memory queue for now
 class JobQueue:
     def __init__(self):
-        self.queue: asyncio.Queue = asyncio.Queue()
+        self.queue: Optional[asyncio.Queue] = None
         self.workers = []
         self.max_workers = 3
+        self._initialized = False
+    
+    async def initialize(self):
+        """Initialize the queue in the correct event loop"""
+        if not self._initialized:
+            self.queue = asyncio.Queue()
+            self._initialized = True
     
     async def add_job(self, scene_id: str):
         """Add a job to the queue"""
+        if not self._initialized:
+            await self.initialize()
         await self.queue.put(scene_id)
     
     async def start_workers(self):
         """Start worker tasks"""
+        if not self._initialized:
+            await self.initialize()
+        
         for i in range(self.max_workers):
             worker = asyncio.create_task(self._worker(i))
             self.workers.append(worker)

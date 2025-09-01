@@ -6,7 +6,7 @@ from pathlib import Path
 
 from app.models.scene import (
     SceneRequest, Scene, SceneResponse, 
-    SceneListResponse, SceneStatus
+    SceneListResponse, SceneStatus, AnimationLibrary
 )
 from app.services.scene_service import SceneService
 from app.services.prompt_enhancement_service import PromptEnhancementService
@@ -235,9 +235,11 @@ async def regenerate_scene(
     if scene.original_prompt:
         try:
             logger.info(f"Re-enhancing prompt for regeneration: {scene.original_prompt}")
+            # Convert library string to enum if needed
+            library_enum = scene.library if isinstance(scene.library, AnimationLibrary) else AnimationLibrary(scene.library)
             enhanced_prompt = await enhancement_service.enhance_prompt(
                 original_prompt=scene.original_prompt,
-                library=scene.library,
+                library=library_enum,
                 duration=scene.duration,
                 style=scene.metadata.get("style", {})
             )

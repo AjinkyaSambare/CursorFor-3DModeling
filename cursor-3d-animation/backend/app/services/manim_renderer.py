@@ -15,7 +15,8 @@ class ManimRenderer:
     """Service for rendering Manim animations."""
     
     def __init__(self):
-        self.manim_env = "/Users/Ajinkya25/Documents/Projects/3D-Modeling/manim_env/bin/python"
+        # Use bash to activate venv and run manim
+        self.venv_path = "/Users/ajinkya/Documents/Idealabs/Projects/3D-Modeling/manim_env"
         self.storage_dir = Path("storage/videos")
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         
@@ -39,15 +40,9 @@ class ManimRenderer:
             # Write code to file
             temp_file.write_text(scene_code)
             
-            # Run Manim
-            cmd = [
-                self.manim_env, "-m", "manim",
-                "-qm",  # medium quality
-                "--format", "mp4",
-                "--disable_caching",
-                str(temp_file),
-                scene_name
-            ]
+            # Create bash command to activate venv and run manim
+            bash_cmd = f"source {self.venv_path}/bin/activate && python3 -m manim -qm --format mp4 --disable_caching {temp_file} {scene_name}"
+            cmd = ["/bin/bash", "-c", bash_cmd]
             
             logger.info(f"Executing Manim command: {' '.join(cmd)}")
             

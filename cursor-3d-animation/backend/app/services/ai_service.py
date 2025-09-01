@@ -38,7 +38,10 @@ class AzureOpenAIProvider(AIProvider):
         )
         
         code = response.choices[0].message.content
-        return self._clean_code(code)
+        logger.info(f"Azure AI Generated code (raw):\n{code}")
+        cleaned_code = self._clean_code(code)
+        logger.info(f"Azure AI Generated code (cleaned):\n{cleaned_code}")
+        return cleaned_code
 
     def _get_system_prompt(self, library: AnimationLibrary) -> str:
         if library == AnimationLibrary.MANIM:
@@ -222,15 +225,22 @@ FRAME POSITIONING SYSTEM:
 - Safe positioning: .move_to(ORIGIN), .shift(LEFT*2), .shift(UP*1.5)
 - Group objects: VGroup() to animate together
 
-🚨 CRITICAL: PREVENT OVERLAPPING ELEMENTS
-- NEVER place text/labels on top of each other
-- Use .next_to() to position text relative to objects with proper spacing
-- Maintain minimum 1.5 unit spacing between text elements
-- Position labels above, below, or beside objects (not overlapping)
-- Use strategic positioning: UP*2, DOWN*2, LEFT*3, RIGHT*3 for separation
-- For multiple labels: distribute them evenly around objects
-- Example: label1.next_to(obj, UP, buff=0.5), label2.next_to(obj, DOWN, buff=0.5)
-- Test positioning: ensure all text is readable and non-overlapping
+🚨 CRITICAL: TEXT POSITIONING & ALIGNMENT
+- **DEFAULT POSITIONING**: Unless specifically requested otherwise, CENTER all main text using .move_to(ORIGIN)
+- **USER-SPECIFIED ALIGNMENT**: If prompt mentions "left", "right", "center", or specific positioning, follow it exactly
+- **CONTEXTUAL ALIGNMENT**: 
+  * Titles/headers → CENTER (.move_to(ORIGIN))
+  * Labels for objects → Use .next_to() relative to the object
+  * Body text → CENTER unless prompt specifies otherwise
+  * Multiple text elements → Distribute evenly with proper spacing
+- **PREVENT OVERLAPPING**: NEVER place text/labels on top of each other
+- **SPACING RULES**: Maintain minimum 1.5 unit spacing between text elements
+- **POSITIONING METHODS**:
+  * Center: text.move_to(ORIGIN)
+  * Left align: text.move_to(LEFT * 3)
+  * Right align: text.move_to(RIGHT * 3)
+  * Relative: text.next_to(object, UP/DOWN/LEFT/RIGHT, buff=0.5)
+- **MULTI-TEXT LAYOUT**: Distribute evenly around objects or use UP*2, DOWN*2 for vertical stacking
 
 🎨 VISUAL DESIGN EXCELLENCE:
 - Use contrasting colors for better visibility (dark text on light objects, vice versa)
@@ -252,6 +262,8 @@ OPTIMIZED ANIMATION STRUCTURE:
 
 💎 CODE QUALITY STANDARDS:
 - Clean, readable code with logical flow and clear comments
+- **RESPECT USER INTENT**: Follow user's specific alignment/positioning requests exactly
+- **DEFAULT TO CENTER**: When no alignment specified, center main text using .move_to(ORIGIN)
 - Proper object positioning within frame boundaries
 - NO OVERLAPPING TEXT OR LABELS - ensure all text is readable
 - Use .next_to() for label positioning relative to objects
@@ -300,16 +312,19 @@ EXAMPLE FOR 5-SECOND ANIMATION:
 - Phase 3: self.play(FadeOut(obj2), run_time=1.0)  # 1 second
 - Total: 1.0 + 0.5 + 2.0 + 0.5 + 1.0 = 5.0 seconds EXACTLY
 
-DURATION-PERFECT EXAMPLE WITH PROPER TEXT POSITIONING (5 seconds):
+DURATION-PERFECT EXAMPLE WITH PROPER TEXT ALIGNMENT (5 seconds):
 from manim import *
 
 class AnimationScene(Scene):
     def construct(self):
-        # Create objects with safe positioning and non-overlapping labels
-        circle = Circle(radius=1, color=BLUE).move_to(ORIGIN)
-        square = Square(side_length=2, color=RED).shift(LEFT*3)
+        # EXAMPLE 1: Main title - DEFAULT TO CENTER
+        title = Text("Animation Title", font_size=36, color=WHITE).move_to(ORIGIN)
         
-        # Create labels with proper spacing - NO OVERLAPS
+        # EXAMPLE 2: Objects with relative labels
+        circle = Circle(radius=1, color=BLUE).shift(LEFT*2)
+        square = Square(side_length=1.5, color=RED).shift(RIGHT*2)
+        
+        # EXAMPLE 3: Labels positioned relative to objects (NOT centered)
         circle_label = Text("Circle", font_size=24).next_to(circle, UP, buff=0.5)
         square_label = Text("Square", font_size=24).next_to(square, DOWN, buff=0.5)
         

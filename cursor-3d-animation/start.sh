@@ -4,9 +4,12 @@
 
 echo "Starting Cursor for 3D Animation..."
 
+# Get the directory of this script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 # Function to kill processes on exit
 cleanup() {
-    echo "\nShutting down..."
+    echo -e "\nShutting down..."
     kill $BACKEND_PID $FRONTEND_PID 2>/dev/null
     exit
 }
@@ -15,8 +18,8 @@ trap cleanup INT TERM
 
 # Start backend
 echo "Starting backend..."
-cd backend
-source /Users/Ajinkya25/Documents/Projects/3D-Modeling/manim_env/bin/activate
+cd "$SCRIPT_DIR/backend"
+source /Users/ajinkya/Documents/Idealabs/Projects/3D-Modeling/manim_env/bin/activate
 python run.py &
 BACKEND_PID=$!
 
@@ -25,7 +28,7 @@ sleep 5
 
 # Start frontend
 echo "Starting frontend..."
-cd ../frontend
+cd "$SCRIPT_DIR/frontend"
 npm run dev &
 FRONTEND_PID=$!
 
