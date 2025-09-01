@@ -1,16 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Folder, Edit, Trash2, Film } from 'lucide-react';
-
-// Inline types
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  scenes: string[];
-  timeline: any[];
-  created_at: string;
-  updated_at: string;
-}
+import type { Project } from '../types';
 
 interface ProjectCardProps {
   project: Project;

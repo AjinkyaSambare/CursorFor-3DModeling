@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../../contexts/AuthContext'
@@ -45,7 +45,7 @@ export default function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormPro
       } else if (user) {
         onSuccess()
       }
-    } catch (error) {
+    } catch {
       setError('root', {
         type: 'manual',
         message: 'An unexpected error occurred'

@@ -1,13 +1,13 @@
 import axios from 'axios';
 import { supabase } from '../lib/supabase';
+import type { Scene, Project, ProjectRequest } from '../types';
 
-// Temporary inline types to fix import issue
 interface SceneRequest {
   prompt: string;
   library?: string;
   duration?: number;
   resolution?: string;
-  style?: Record<string, any>;
+  style?: Record<string, unknown>;
   use_enhanced_prompt?: boolean;
 }
 
@@ -23,27 +23,11 @@ interface SceneResponse {
 }
 
 interface SceneListResponse {
-  scenes: any[];
+  scenes: Scene[];
   total: number;
   page: number;
   page_size: number;
   total_pages: number;
-}
-
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  scenes: string[];
-  timeline: any[];
-  created_at: string;
-  updated_at: string;
-}
-
-interface ProjectRequest {
-  name: string;
-  description?: string;
-  scenes?: string[];
 }
 
 interface ExportRequest {
@@ -78,7 +62,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // 30 second timeout for better reliability
 });
 
 // Add auth interceptor to include JWT token in requests
@@ -189,13 +173,28 @@ export const sceneApi = {
     }
   },
 
-  getCode: async (sceneId: string): Promise<any> => {
+  getCode: async (sceneId: string): Promise<{ code: string; language: string }> => {
     const { data } = await api.get(`/scenes/${sceneId}/code`);
     return data;
   },
 
-  checkHealth: async (sceneId: string): Promise<any> => {
+  checkHealth: async (sceneId: string): Promise<{ status: string; message?: string; valid: boolean; details?: Record<string, unknown> }> => {
     const { data } = await api.get(`/scenes/${sceneId}/health`);
+    return data;
+  },
+
+  duplicate: async (sceneId: string): Promise<SceneResponse> => {
+    const { data } = await api.post(`/scenes/${sceneId}/duplicate`);
+    return data;
+  },
+
+  getProperties: async (sceneId: string): Promise<Record<string, unknown>> => {
+    const { data } = await api.get(`/scenes/${sceneId}/properties`);
+    return data;
+  },
+
+  update: async (sceneId: string, updates: Record<string, unknown>): Promise<SceneResponse> => {
+    const { data } = await api.put(`/scenes/${sceneId}`, updates);
     return data;
   }
 };
@@ -262,12 +261,12 @@ export const projectApi = {
 
 // Health API
 export const healthApi = {
-  check: async (): Promise<any> => {
+  check: async (): Promise<{ status: string; timestamp: string }> => {
     const { data } = await api.get('/health/');
     return data;
   },
 
-  ready: async (): Promise<any> => {
+  ready: async (): Promise<{ status: string; timestamp: string }> => {
     const { data } = await api.get('/health/ready');
     return data;
   }
@@ -278,14 +277,14 @@ interface UserProfile {
   id: string;
   display_name?: string;
   avatar_url?: string;
-  preferences: Record<string, any>;
+  preferences: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
 
 interface ProfileUpdateRequest {
   display_name?: string;
-  preferences?: Record<string, any>;
+  preferences?: Record<string, unknown>;
 }
 
 interface AvatarUploadResponse {
@@ -322,7 +321,7 @@ export const authApi = {
     return data;
   },
 
-  getMe: async (): Promise<any> => {
+  getMe: async (): Promise<UserProfile> => {
     const { data } = await api.get('/auth/me');
     return data;
   }

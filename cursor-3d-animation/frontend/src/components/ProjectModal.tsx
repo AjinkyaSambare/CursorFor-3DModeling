@@ -1,22 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-
-// Inline types
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  scenes: string[];
-  timeline: any[];
-  created_at: string;
-  updated_at: string;
-}
-
-interface ProjectRequest {
-  name: string;
-  description?: string;
-  scenes?: string[];
-}
+import type { Project, ProjectRequest } from '../types';
 
 interface ProjectModalProps {
   isOpen: boolean;

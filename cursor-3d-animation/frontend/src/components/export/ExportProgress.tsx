@@ -114,7 +114,7 @@ export default function ExportProgress({
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (err) {
+    } catch {
       setError('Failed to download file');
     }
   };

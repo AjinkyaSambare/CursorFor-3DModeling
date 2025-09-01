@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { useCreateScene, useScene } from '../hooks/useScenes';
 import ScenePreview from '../components/ScenePreview';
@@ -20,12 +20,11 @@ interface SceneRequest {
   library?: string;
   duration?: number;
   resolution?: string;
-  style?: Record<string, any>;
+  style?: Record<string, unknown>;
   use_enhanced_prompt?: boolean;
 }
 
 export default function CreateScene() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const createScene = useCreateScene();
   const [currentSceneId, setCurrentSceneId] = useState<string | null>(null);
@@ -38,10 +37,25 @@ export default function CreateScene() {
     resolution: Resolution.FULL_HD,
   });
 
-  const { data: sceneData, isLoading: sceneLoading } = useScene(
+  const { data: sceneData, refetch: refetchScene } = useScene(
     currentSceneId || '',
     !!currentSceneId
   );
+  
+  // Add manual polling as a fallback for scene status updates
+  useEffect(() => {
+    if (!currentSceneId || !sceneData) return;
+    
+    // If scene is processing, ensure we're polling
+    const processingStatuses = ['pending', 'processing', 'generating_code', 'rendering'];
+    if (processingStatuses.includes(sceneData.status)) {
+      const interval = setInterval(() => {
+        refetchScene();
+      }, 1500); // Poll every 1.5 seconds
+      
+      return () => clearInterval(interval);
+    }
+  }, [currentSceneId, sceneData?.status, refetchScene]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,12 +65,15 @@ export default function CreateScene() {
         ...formData,
         use_enhanced_prompt: enhancePrompt
       };
+      console.log('Creating scene with data:', requestData);
       const response = await createScene.mutateAsync(requestData);
+      console.log('Scene creation response:', response);
       setCurrentSceneId(response.id);
       
       // Keep user on create page to watch scene progress
     } catch (error) {
       console.error('Failed to create scene:', error);
+      // The error is already handled by the mutation's onError callback
     }
   };
 
@@ -136,7 +153,7 @@ export default function CreateScene() {
                       name="library"
                       value={option.value}
                       checked={formData.library === option.value}
-                      onChange={(e) => setFormData({ ...formData, library: e.target.value as AnimationLibrary })}
+                      onChange={(e) => setFormData({ ...formData, library: e.target.value })}
                       className="mr-3"
                     />
                     <span className="text-gray-700">{option.label}</span>
@@ -168,7 +185,7 @@ export default function CreateScene() {
               </label>
               <select
                 value={formData.resolution}
-                onChange={(e) => setFormData({ ...formData, resolution: e.target.value as Resolution })}
+                onChange={(e) => setFormData({ ...formData, resolution: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 {resolutionOptions.map((option) => (
@@ -205,7 +222,6 @@ export default function CreateScene() {
           {currentSceneId && sceneData ? (
             <ScenePreview
               scene={sceneData}
-              isLoading={sceneLoading}
             />
           ) : (
             <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">

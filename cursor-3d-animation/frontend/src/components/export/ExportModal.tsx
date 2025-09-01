@@ -8,6 +8,8 @@ interface ExportModalProps {
   projectName: string;
   sceneCount: number;
   totalDuration: number;
+  transitionCount?: number;
+  hasCustomTransitions?: boolean;
   isExporting?: boolean;
 }
 
@@ -25,6 +27,8 @@ export default function ExportModal({
   projectName, 
   sceneCount, 
   totalDuration,
+  transitionCount = 0,
+  hasCustomTransitions = false,
   isExporting = false
 }: ExportModalProps) {
   const [config, setConfig] = useState<ExportConfig>({
@@ -105,7 +109,7 @@ export default function ExportModal({
 
             {/* Project Summary */}
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <div className="flex items-center justify-between text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center">
                   <Film className="h-4 w-4 text-gray-400 mr-2" />
                   <span className="text-gray-600">{sceneCount} scenes</span>
@@ -114,6 +118,18 @@ export default function ExportModal({
                   <Zap className="h-4 w-4 text-gray-400 mr-2" />
                   <span className="text-gray-600">{totalDuration}s total</span>
                 </div>
+                {hasCustomTransitions && (
+                  <>
+                    <div className="flex items-center">
+                      <Settings className="h-4 w-4 text-gray-400 mr-2" />
+                      <span className="text-gray-600">{transitionCount} transitions</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="inline-block w-2 h-2 bg-yellow-400 rounded-full mr-2" />
+                      <span className="text-gray-600">Custom effects</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -197,13 +213,29 @@ export default function ExportModal({
                       onChange={(e) => setConfig({ ...config, includeTransitions: e.target.checked })}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <span className="ml-2 text-sm text-gray-700">Add smooth transitions between scenes</span>
+                    <span className="ml-2 text-sm text-gray-700">
+                      {hasCustomTransitions 
+                        ? `Include custom transitions (${transitionCount} configured)`
+                        : 'Add smooth transitions between scenes'
+                      }
+                    </span>
                   </label>
+
+                  {hasCustomTransitions && config.includeTransitions && (
+                    <div className="ml-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="text-sm text-blue-800">
+                        <strong>Custom transitions detected:</strong>
+                        <br />
+                        Your timeline includes {transitionCount} custom transition{transitionCount !== 1 ? 's' : ''} with specific effects and durations. 
+                        These will be preserved in the exported video.
+                      </div>
+                    </div>
+                  )}
                   
-                  {config.includeTransitions && (
+                  {config.includeTransitions && !hasCustomTransitions && (
                     <div className="ml-6">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Transition Duration
+                        Default Transition Duration
                       </label>
                       <div className="flex items-center space-x-3">
                         <input
@@ -218,6 +250,9 @@ export default function ExportModal({
                         <span className="text-sm text-gray-600 w-12">
                           {config.transitionDuration}s
                         </span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Applied to all scene transitions (fade effect)
                       </div>
                     </div>
                   )}

@@ -8,6 +8,7 @@ interface PlaybackControlsProps {
   onPlay: () => void;
   onReset: () => void;
   onTimeChange: (time: number) => void;
+  syncWithVideo?: boolean; // When true, don't auto-advance time (video will handle it)
 }
 
 export default function PlaybackControls({
@@ -17,12 +18,13 @@ export default function PlaybackControls({
   onPlay,
   onReset,
   onTimeChange,
+  syncWithVideo = false,
 }: PlaybackControlsProps) {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
-  // Auto-advance time when playing
+  // Auto-advance time when playing (only if not syncing with video)
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying || syncWithVideo) return;
 
     const interval = setInterval(() => {
       const newTime = currentTime + (0.1 * playbackSpeed);
@@ -35,7 +37,7 @@ export default function PlaybackControls({
     }, 100);
 
     return () => clearInterval(interval);
-  }, [isPlaying, playbackSpeed, totalDuration, currentTime, onTimeChange, onPlay]);
+  }, [isPlaying, playbackSpeed, totalDuration, currentTime, onTimeChange, onPlay, syncWithVideo]);
 
   const handleSkipBack = () => {
     onTimeChange(Math.max(0, currentTime - 5));

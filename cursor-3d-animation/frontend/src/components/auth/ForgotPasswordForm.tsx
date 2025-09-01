@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -41,7 +41,7 @@ export default function ForgotPasswordForm({ onSuccess, onSwitchToLogin }: Forgo
           onSuccess()
         }, 3000)
       }
-    } catch (error) {
+    } catch {
       setError('root', {
         type: 'manual',
         message: 'An unexpected error occurred'

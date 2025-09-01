@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Film, Loader2, GripVertical, X, Trash2 } from 'lucide-react';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useProject, useRemoveSceneFromProject, useReorderProjectScenes, useAddSceneToProject } from '../hooks/useProjects';
 import { useScenes } from '../hooks/useScenes';
-import { sceneApi, projectApi } from '../services/api';
+import { sceneApi } from '../services/api';
+import type { Scene } from '../types';
 
 // Helper function to create user-friendly scene names
 const getSceneDisplayName = (scene: Scene): string => {
@@ -29,23 +30,7 @@ const getSceneDisplayName = (scene: Scene): string => {
   return displayName;
 };
 
-// Inline types
-interface Scene {
-  id: string;
-  prompt: string;
-  original_prompt?: string;
-  library: string;
-  duration: number;
-  resolution: string;
-  status: string;
-  generated_code?: string;
-  video_path?: string;
-  thumbnail_path?: string;
-  metadata: Record<string, any>;
-  error?: string;
-  created_at: string;
-  updated_at: string;
-}
+// Remove inline Scene interface since we're importing it from types
 
 interface SortableSceneItemProps {
   scene: Scene;
@@ -138,12 +123,12 @@ export default function ProjectDetailPage() {
     scene => !project.scenes.includes(scene.id)
   ) || [];
 
-  const handleDragEnd = async (event: any) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (active.id !== over.id) {
-      const oldIndex = project.scenes.indexOf(active.id);
-      const newIndex = project.scenes.indexOf(over.id);
+    if (over && active.id !== over.id) {
+      const oldIndex = project.scenes.indexOf(String(active.id));
+      const newIndex = project.scenes.indexOf(String(over.id));
 
       const newOrder = arrayMove(project.scenes, oldIndex, newIndex);
       

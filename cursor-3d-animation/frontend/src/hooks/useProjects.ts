@@ -1,17 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectApi } from '../services/api';
 
-// Temporary inline types
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  scenes: string[];
-  timeline: any[];
-  created_at: string;
-  updated_at: string;
-}
-
 interface ProjectRequest {
   name: string;
   description?: string;

@@ -26,7 +26,6 @@ import CodeViewer from './CodeViewer';
 
 interface ScenePreviewProps {
   scene: SceneResponse;
-  isLoading: boolean;
   onComplete?: () => void;
 }
 
@@ -112,10 +111,20 @@ function VideoPlayer({ sceneId, scene }: { sceneId: string; scene: SceneResponse
   );
 }
 
-export default function ScenePreview({ scene, isLoading, onComplete }: ScenePreviewProps) {
+export default function ScenePreview({ scene }: ScenePreviewProps) {
   const [showCode, setShowCode] = useState(false);
   const regenerateScene = useRegenerateScene();
   const navigate = useNavigate();
+  
+  // Log scene updates for debugging
+  useEffect(() => {
+    console.log('[ScenePreview] Scene updated:', {
+      id: scene?.id,
+      status: scene?.status,
+      message: scene?.message,
+      video_url: scene?.video_url
+    });
+  }, [scene]);
 
   const getStatusIcon = () => {
     switch (scene.status) {

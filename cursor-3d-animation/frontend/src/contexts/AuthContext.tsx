@@ -36,7 +36,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const [initialized, setInitialized] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -47,7 +46,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Simplified initialization
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
+        const { data: { session } } = await supabase.auth.getSession()
         
         if (!mounted) return
         
@@ -62,7 +61,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
         
         setLoading(false)
-        setInitialized(true)
         isInitializing = false
         console.log('[Auth] ✅ Auth initialization complete')
         
@@ -70,7 +68,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.error('[Auth] ❌ Auth initialization error:', error)
         if (mounted) {
           setLoading(false)
-          setInitialized(true)
           isInitializing = false
         }
       }

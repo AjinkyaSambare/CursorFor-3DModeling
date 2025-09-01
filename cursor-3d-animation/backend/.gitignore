@@ -54,3 +54,8 @@ export_jobs/
 
 # FFmpeg temp files
 *.temp.mp4
+
+# Manim cache files
+media/texts/
+media/videos/scene/
+media/images/scene/

@@ -2,25 +2,8 @@ import { useState, useEffect } from 'react';
 import { Play, Download, Trash2, RefreshCw, Clock, Film } from 'lucide-react';
 import { sceneApi } from '../services/api';
 import { useDeleteScene, useRegenerateScene, useSceneStatusUpdates } from '../hooks/useScenes';
+import type { Scene } from '../types';
 import clsx from 'clsx';
-
-// Inline types
-interface Scene {
-  id: string;
-  prompt: string;
-  library: string;
-  duration: number;
-  resolution: string;
-  status: string;
-  generated_code?: string;
-  video_path?: string;
-  thumbnail_path?: string;
-  metadata: Record<string, any>;
-  error?: string;
-  created_at: string;
-  updated_at: string;
-  original_prompt?: string;
-}
 
 const SceneStatus = {
   PENDING: "pending",
@@ -32,7 +15,7 @@ const SceneStatus = {
 } as const;
 
 interface SceneCardProps {
-  scene: Scene;
+  scene: Scene; // Use Scene interface for type safety
 }
 
 export default function SceneCard({ scene }: SceneCardProps) {
@@ -42,11 +25,20 @@ export default function SceneCard({ scene }: SceneCardProps) {
   const deleteScene = useDeleteScene();
   const regenerateScene = useRegenerateScene();
   
-  // Use real-time status updates for processing scenes
+  // Move hooks before conditional returns to follow Rules of Hooks
   const { data: updatedScene } = useSceneStatusUpdates(scene);
   
+  // Add safety check for scene object after hooks
+  if (!scene || !scene.id) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border p-4">
+        <p className="text-gray-500">Invalid scene data</p>
+      </div>
+    );
+  }
+  
   // Use updated scene data if available, otherwise use prop scene
-  const currentScene = updatedScene || scene;
+  const currentScene = (updatedScene && typeof updatedScene === 'object' && 'id' in updatedScene ? updatedScene : scene) as Scene;
 
   const statusColors = {
     [SceneStatus.PENDING]: 'bg-gray-100 text-gray-700',
@@ -165,28 +157,28 @@ export default function SceneCard({ scene }: SceneCardProps) {
           <span
             className={clsx(
               'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-              statusColors[currentScene.status],
+              statusColors[currentScene.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-700',
               // Add pulsing animation for processing states
-              ['pending', 'processing', 'generating_code', 'rendering'].includes(currentScene.status) && 'animate-pulse'
+              currentScene.status && ['pending', 'processing', 'generating_code', 'rendering'].includes(currentScene.status) && 'animate-pulse'
             )}
           >
-            {currentScene.status.replace('_', ' ')}
+            {currentScene.status?.replace('_', ' ') || 'Unknown'}
           </span>
           <span className="text-xs text-gray-500 flex items-center">
             <Clock className="w-3 h-3 mr-1" />
-            {currentScene.duration}s
+            {currentScene.duration || 0}s
           </span>
         </div>
 
         {/* Prompt */}
         <p className="text-sm text-gray-700 mb-3 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-          {currentScene.original_prompt || currentScene.prompt}
+          {currentScene.original_prompt || currentScene.prompt || 'No prompt available'}
         </p>
 
         {/* Meta Info */}
         <div className="text-xs text-gray-500 space-y-1">
-          <div>{currentScene.library.toUpperCase()} • {currentScene.resolution}</div>
-          <div>{formatDate(currentScene.created_at)}</div>
+          <div>{(currentScene.library && typeof currentScene.library === 'string') ? currentScene.library.toUpperCase() : 'UNKNOWN'} • {currentScene.resolution || 'Unknown'}</div>
+          <div>{currentScene.created_at ? formatDate(currentScene.created_at) : 'Unknown date'}</div>
         </div>
 
         {/* Actions */}

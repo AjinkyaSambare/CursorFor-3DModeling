@@ -26,6 +26,8 @@ interface ScenePreviewProps {
   currentTime: number;
   selectedSceneId: string | null;
   onSceneSelect: (sceneId: string | null) => void;
+  isPlaying?: boolean;
+  onTimeUpdate?: (time: number) => void;
 }
 
 export default function ScenePreview({
@@ -33,6 +35,8 @@ export default function ScenePreview({
   currentTime,
   selectedSceneId,
   onSceneSelect,
+  isPlaying = false,
+  onTimeUpdate,
 }: ScenePreviewProps) {
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const [videoHealth, setVideoHealth] = useState<{[key: string]: any}>({});
@@ -120,6 +124,29 @@ export default function ScenePreview({
     }
   }, [currentSceneInfo, selectedScene]);
 
+  // Control video playback based on timeline playback state
+  useEffect(() => {
+    if (videoRef.current && currentSceneInfo && !selectedScene) {
+      const video = videoRef.current;
+      
+      if (isPlaying && video.paused) {
+        video.play().catch(console.error);
+      } else if (!isPlaying && !video.paused) {
+        video.pause();
+      }
+    }
+  }, [isPlaying, currentSceneInfo, selectedScene]);
+
+  // Handle video time updates to sync back to timeline
+  const handleVideoTimeUpdate = () => {
+    if (videoRef.current && currentSceneInfo && !selectedScene && onTimeUpdate) {
+      const video = videoRef.current;
+      const sceneStartTime = currentTime - currentSceneInfo.sceneTime;
+      const newTimelineTime = sceneStartTime + video.currentTime;
+      onTimeUpdate(newTimelineTime);
+    }
+  };
+
   return (
     <div className="h-full bg-gray-800 flex flex-col">
       {/* Header */}
@@ -169,15 +196,22 @@ export default function ScenePreview({
               ref={videoRef}
               src={previewVideoUrl}
               className="w-full h-auto rounded-lg bg-black"
-              controls
+              controls={selectedScene ? true : false}
               muted
               preload="metadata"
+              onTimeUpdate={handleVideoTimeUpdate}
               onError={(e) => {
                 console.error('Video playback error:', e);
                 setVideoError('Video playback failed');
               }}
               onLoadStart={() => console.log('Video loading started')}
               onCanPlay={() => console.log('Video can play')}
+              onSeeked={() => {
+                // Handle seek events when user manually scrubs video
+                if (videoRef.current && selectedScene && onTimeUpdate) {
+                  onTimeUpdate(videoRef.current.currentTime);
+                }
+              }}
             />
           </div>
         ) : (

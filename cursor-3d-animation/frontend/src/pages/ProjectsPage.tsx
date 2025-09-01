@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Plus, Folder, Loader2 } from 'lucide-react';
 import { useProjects, useCreateProject, useUpdateProject, useDeleteProject } from '../hooks/useProjects';
 import ProjectCard from '../components/ProjectCard';
@@ -25,7 +24,6 @@ interface ProjectRequest {
 export default function ProjectsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | undefined>(undefined);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data: projects, isLoading, error } = useProjects();
   const createProject = useCreateProject();
@@ -58,13 +56,10 @@ export default function ProjectsPage() {
 
   const handleDelete = async (projectId: string) => {
     if (window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-      setDeletingId(projectId);
       try {
         await deleteProject.mutateAsync(projectId);
       } catch (error) {
         console.error('Failed to delete project:', error);
-      } finally {
-        setDeletingId(null);
       }
     }
   };

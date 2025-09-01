@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ZoomIn, ZoomOut, Download } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useProject } from '../hooks/useProjects';
 import { useScenes } from '../hooks/useScenes';
 import { projectApi, sceneApi } from '../services/api';
@@ -9,6 +9,14 @@ import PlaybackControls from '../components/timeline/PlaybackControls';
 import ScenePreview from '../components/timeline/ScenePreview';
 import ExportModal from '../components/export/ExportModal';
 import ExportProgress from '../components/export/ExportProgress';
+import TimelineToolbar from '../components/timeline/TimelineToolbar';
+import SceneContextMenu from '../components/timeline/SceneContextMenu';
+import ScenePropertiesModal from '../components/timeline/ScenePropertiesModal';
+import SceneEditModal from '../components/timeline/SceneEditModal';
+import CodeViewerModal from '../components/timeline/CodeViewerModal';
+import { useUndoRedo, createSceneDurationCommand, createTransitionChangeCommand } from '../hooks/useUndoRedo';
+import { useDeleteScene, useRegenerateScene } from '../hooks/useScenes';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import toast from 'react-hot-toast';
 
 // Inline types
@@ -22,7 +30,7 @@ interface Scene {
   generated_code?: string;
   video_path?: string;
   thumbnail_path?: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   error?: string;
   created_at: string;
   updated_at: string;
@@ -37,6 +45,17 @@ export default function TimelineEditorPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showExportProgress, setShowExportProgress] = useState(false);
   const [currentExportId, setCurrentExportId] = useState<string | null>(null);
+  const [transitions, setTransitions] = useState<Record<string, { id: string; type: string; duration: number }>>({});
+  const [contextMenu, setContextMenu] = useState<{ scene: Scene; position: { x: number; y: number } } | null>(null);
+  const [showPropertiesModal, setShowPropertiesModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [selectedModalScene, setSelectedModalScene] = useState<Scene | null>(null);
+
+  // Undo/Redo system
+  const undoRedo = useUndoRedo(100);
+  const deleteScene = useDeleteScene();
+  const regenerateScene = useRegenerateScene();
   
   const { data: project, isLoading: projectLoading } = useProject(projectId!);
   const { data: scenesData } = useScenes();
@@ -48,6 +67,24 @@ export default function TimelineEditorPage() {
 
   // Calculate total timeline duration
   const totalDuration = projectScenes.reduce((total, scene) => total + scene.duration, 0);
+
+  // Check if any modal is open to disable keyboard shortcuts
+  const isModalOpen = showExportModal || showExportProgress || showPropertiesModal || showEditModal || showCodeModal || !!contextMenu;
+
+  // Find current scene for video sync
+  const getCurrentScene = () => {
+    let accumulatedTime = 0;
+    for (const scene of projectScenes) {
+      if (currentTime >= accumulatedTime && currentTime < accumulatedTime + scene.duration) {
+        return { scene, sceneTime: currentTime - accumulatedTime };
+      }
+      accumulatedTime += scene.duration;
+    }
+    return null;
+  };
+
+  const currentSceneInfo = getCurrentScene();
+  const hasVideoToSync = currentSceneInfo?.scene?.video_path && currentSceneInfo.scene.status === 'completed';
 
   const handlePlay = () => {
     setIsPlaying(!isPlaying);
@@ -68,6 +105,71 @@ export default function TimelineEditorPage() {
 
   const handleTimeChange = (time: number) => {
     setCurrentTime(time);
+  };
+
+  const handleStepBackward = () => {
+    const newTime = Math.max(0, currentTime - 1);
+    setCurrentTime(newTime);
+    setIsPlaying(false); // Pause when stepping
+  };
+
+  const handleStepForward = () => {
+    const newTime = Math.min(totalDuration, currentTime + 1);
+    setCurrentTime(newTime);
+    setIsPlaying(false); // Pause when stepping
+  };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onSpace: handlePlay,
+    onLeftArrow: handleStepBackward,
+    onRightArrow: handleStepForward,
+    disabled: isModalOpen
+  });
+
+  // Enhanced handlers with undo/redo support
+  const handleSceneDurationChange = async (sceneId: string, newDuration: number) => {
+    const scene = projectScenes.find(s => s.id === sceneId);
+    if (!scene || scene.duration === newDuration) return;
+
+    const command = createSceneDurationCommand(
+      sceneId,
+      scene.duration,
+      newDuration,
+      async (id: string, duration: number) => {
+        // TODO: Update scene duration via API
+        console.log(`Update scene ${id} duration to ${duration}s`);
+      }
+    );
+
+    try {
+      await undoRedo.executeCommand(command);
+    } catch (_error) {
+      toast.error('Failed to change scene duration');
+    }
+  };
+
+  const handleTransitionChange = async (sceneId: string, transitionId: string, duration: number) => {
+    const oldTransition = transitions[sceneId] || { type: 'none', duration: 0 };
+    const newTransition = { type: transitionId, duration };
+
+    const command = createTransitionChangeCommand(
+      sceneId,
+      oldTransition,
+      newTransition,
+      async (id: string, type: string, dur: number) => {
+        setTransitions(prev => ({
+          ...prev,
+          [id]: { id: `transition-${id}`, type, duration: dur }
+        }));
+      }
+    );
+
+    try {
+      await undoRedo.executeCommand(command);
+    } catch (_error) {
+      toast.error('Failed to change transition');
+    }
   };
 
   const handleExport = async () => {
@@ -97,7 +199,7 @@ export default function TimelineEditorPage() {
           validationFailed = true;
           break;
         }
-      } catch (error) {
+      } catch (_error) {
         toast.error(`Failed to validate scene "${scene.prompt.substring(0, 30)}..."`);
         validationFailed = true;
         break;
@@ -115,12 +217,12 @@ export default function TimelineEditorPage() {
     setShowExportModal(true);
   };
 
-  const handleExportStart = async (config: any) => {
+  const handleExportStart = async (config: { format: string; resolution: string; includeTransitions: boolean; transitionDuration: number }) => {
     try {
       const exportRequest = {
         project_id: projectId,
-        format: config.format,
-        resolution: config.resolution,
+        format: config.format as 'mp4' | 'webm',
+        resolution: config.resolution as '720p' | '1080p' | '4K',
         include_transitions: config.includeTransitions,
         transition_duration: config.transitionDuration
       };
@@ -131,13 +233,88 @@ export default function TimelineEditorPage() {
       setShowExportModal(false);
       setShowExportProgress(true);
       toast.success('Export started successfully!');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to start export. Please try again.');
     }
   };
 
-  const handleExportComplete = (downloadUrl: string) => {
+  const handleExportComplete = (_downloadUrl: string) => {
     toast.success('Export completed! Download ready.');
+  };
+
+  // Context menu handlers
+  const handleContextMenu = (scene: Scene, position: { x: number; y: number }) => {
+    setContextMenu({ scene, position });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  const handleDuplicateScene = async (scene: Scene) => {
+    try {
+      await sceneApi.duplicate(scene.id);
+      toast.success('Scene duplication started - check Scenes page for progress');
+    } catch (error) {
+      toast.error('Failed to duplicate scene');
+    }
+  };
+
+  const handleDeleteSceneFromTimeline = async (scene: Scene) => {
+    if (confirm('Are you sure you want to delete this scene? This action cannot be undone.')) {
+      try {
+        await deleteScene.mutateAsync(scene.id);
+        // Remove scene from project
+        if (project) {
+          const updatedScenes = project.scenes.filter(id => id !== scene.id);
+          await projectApi.update(project.id, {
+            name: project.name,
+            description: project.description,
+            scenes: updatedScenes
+          });
+        }
+        toast.success('Scene deleted from timeline');
+      } catch (error) {
+        toast.error('Failed to delete scene');
+      }
+    }
+  };
+
+  const handleEditScene = (scene: Scene) => {
+    setSelectedModalScene(scene);
+    setShowEditModal(true);
+  };
+
+  const handleRegenerateScene = async (scene: Scene) => {
+    try {
+      await regenerateScene.mutateAsync(scene.id);
+      toast.success('Scene regeneration started');
+    } catch (error) {
+      toast.error('Failed to regenerate scene');
+    }
+  };
+
+  const handleShowCode = (scene: Scene) => {
+    setSelectedModalScene(scene);
+    setShowCodeModal(true);
+  };
+
+  const handleShowProperties = (scene: Scene) => {
+    setSelectedModalScene(scene);
+    setShowPropertiesModal(true);
+  };
+
+  const handleSceneUpdate = async (sceneId: string, updates: any) => {
+    try {
+      await sceneApi.update(sceneId, updates);
+      toast.success(updates.auto_regenerate ? 'Scene updated and regenerating...' : 'Scene updated successfully');
+      setShowEditModal(false);
+      // Refresh scenes data
+      // Note: React Query will automatically refetch when the scene status changes
+    } catch (error) {
+      toast.error('Failed to update scene');
+      throw error;
+    }
   };
 
   if (projectLoading) {
@@ -218,37 +395,32 @@ export default function TimelineEditorPage() {
             <h1 className="text-xl font-semibold">{project.name} - Timeline</h1>
           </div>
           
-          <div className="flex items-center space-x-4">
-            {/* Zoom Controls */}
-            <div className="flex items-center space-x-2 bg-gray-700 rounded-lg px-3 py-1">
-              <button
-                onClick={handleZoomOut}
-                className="text-gray-300 hover:text-white"
-              >
-                <ZoomOut className="w-4 h-4" />
-              </button>
-              <span className="text-sm font-medium">
-                {Math.round(zoom * 100)}%
-              </span>
-              <button
-                onClick={handleZoomIn}
-                className="text-gray-300 hover:text-white"
-              >
-                <ZoomIn className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Export Button */}
-            <button
-              onClick={handleExport}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
-            >
-              <Download className="w-4 h-4" />
-              <span>Export</span>
-            </button>
-          </div>
+          {/* Header actions moved to toolbar */}
         </div>
       </div>
+
+      {/* Timeline Toolbar */}
+      <TimelineToolbar
+        canUndo={undoRedo.canUndo}
+        canRedo={undoRedo.canRedo}
+        onUndo={undoRedo.undo}
+        onRedo={undoRedo.redo}
+        undoDescription={undoRedo.getUndoDescription()}
+        redoDescription={undoRedo.getRedoDescription()}
+        zoom={zoom}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onExport={handleExport}
+        hasSelectedScene={!!selectedSceneId}
+        onDuplicateScene={() => {
+          // TODO: Implement scene duplication
+          console.log('Duplicate scene:', selectedSceneId);
+        }}
+        onDeleteScene={() => {
+          // TODO: Implement scene deletion
+          console.log('Delete scene:', selectedSceneId);
+        }}
+      />
 
       {/* Main Content */}
       <div className="flex-1 flex">
@@ -259,6 +431,8 @@ export default function TimelineEditorPage() {
             currentTime={currentTime}
             selectedSceneId={selectedSceneId}
             onSceneSelect={setSelectedSceneId}
+            isPlaying={isPlaying}
+            onTimeUpdate={setCurrentTime}
           />
         </div>
 
@@ -275,6 +449,10 @@ export default function TimelineEditorPage() {
               onTimeChange={handleTimeChange}
               onSceneSelect={setSelectedSceneId}
               projectId={projectId!}
+              transitions={transitions}
+              onTransitionChange={handleTransitionChange}
+              onDurationChange={handleSceneDurationChange}
+              onContextMenu={handleContextMenu}
             />
           </div>
 
@@ -287,6 +465,7 @@ export default function TimelineEditorPage() {
               onPlay={handlePlay}
               onReset={handleReset}
               onTimeChange={handleTimeChange}
+              syncWithVideo={Boolean(hasVideoToSync && !selectedSceneId)}
             />
           </div>
         </div>
@@ -300,6 +479,8 @@ export default function TimelineEditorPage() {
         projectName={project.name}
         sceneCount={projectScenes.length}
         totalDuration={totalDuration}
+        transitionCount={Object.values(transitions).filter(t => t.type !== 'none' && t.duration > 0).length}
+        hasCustomTransitions={Object.keys(transitions).length > 0}
       />
 
       {/* Export Progress Modal */}
@@ -309,6 +490,50 @@ export default function TimelineEditorPage() {
         exportId={currentExportId || ''}
         projectName={project.name}
         onComplete={handleExportComplete}
+      />
+
+      {/* Scene Context Menu */}
+      <SceneContextMenu
+        scene={contextMenu?.scene || null}
+        position={contextMenu?.position || null}
+        onClose={handleCloseContextMenu}
+        onDuplicate={handleDuplicateScene}
+        onDelete={handleDeleteSceneFromTimeline}
+        onEdit={handleEditScene}
+        onRegenerate={handleRegenerateScene}
+        onShowCode={handleShowCode}
+        onShowProperties={handleShowProperties}
+      />
+
+      {/* Scene Properties Modal */}
+      <ScenePropertiesModal
+        scene={selectedModalScene}
+        isOpen={showPropertiesModal}
+        onClose={() => {
+          setShowPropertiesModal(false);
+          setSelectedModalScene(null);
+        }}
+      />
+
+      {/* Scene Edit Modal */}
+      <SceneEditModal
+        scene={selectedModalScene}
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedModalScene(null);
+        }}
+        onSave={handleSceneUpdate}
+      />
+
+      {/* Code Viewer Modal */}
+      <CodeViewerModal
+        scene={selectedModalScene}
+        isOpen={showCodeModal}
+        onClose={() => {
+          setShowCodeModal(false);
+          setSelectedModalScene(null);
+        }}
       />
     </div>
   );

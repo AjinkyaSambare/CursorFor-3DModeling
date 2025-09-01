@@ -1,13 +1,12 @@
-import React, { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { UserCircleIcon, CalendarIcon, EnvelopeIcon } from '@heroicons/react/24/outline'
+import { CalendarIcon, EnvelopeIcon } from '@heroicons/react/24/outline'
 
 export default function UserProfile() {
   const { user } = useAuth()
 
   const getInitials = () => {
     const name = user?.email?.split('@')[0] || 'U'
-    return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2)
+    return name.split(' ').map((word: string) => word[0]).join('').toUpperCase().slice(0, 2)
   }
 
   const formatDate = (dateString: string | undefined) => {

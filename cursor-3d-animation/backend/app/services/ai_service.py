@@ -69,7 +69,7 @@ IMPLEMENTATION REQUIREMENTS:
 2. Every self.play() must have explicit run_time parameter
 3. All objects must be positioned within video frame boundaries
 4. Create smooth, professional animations with proper pacing
-5. Include strategic wait times for natural rhythm
+5. Include strategic wait times for natural rhythm (MINIMUM 0.1 seconds - NEVER use 0.0)
 6. Use appropriate colors and object sizes for clear visibility
 7. Ensure all elements work without LaTeX dependencies
 8. Add timing calculation comments in the code
@@ -101,7 +101,68 @@ Generate complete, optimized Manim code with precise {duration}-second duration.
             cleaned_lines.append(line)
         
         code = '\n'.join(cleaned_lines)
+        
+        # Fix invalid wait durations that cause Manim errors
+        code = self._fix_wait_durations(code)
+        
+        # Fix text overlap issues
+        code = self._fix_text_overlaps(code)
+        
         return code.strip()
+    
+    def _fix_wait_durations(self, code: str) -> str:
+        """Fix invalid wait durations that cause Manim rendering errors"""
+        import re
+        
+        # Pattern to find self.wait(0.0) or self.wait(0)
+        wait_pattern = r'self\.wait\(0(?:\.0+)?\)'
+        
+        # Replace with minimum valid duration
+        code = re.sub(wait_pattern, 'self.wait(0.1)', code)
+        
+        # Also check for negative wait times
+        negative_wait_pattern = r'self\.wait\(-[0-9.]+\)'
+        code = re.sub(negative_wait_pattern, 'self.wait(0.1)', code)
+        
+        logger.info("Fixed invalid wait durations in generated code")
+        return code
+    
+    def _fix_text_overlaps(self, code: str) -> str:
+        """Add automatic text cleanup to prevent overlapping text issues"""
+        lines = code.split('\n')
+        
+        # Find text creation patterns and add cleanup
+        new_lines = []
+        text_vars = set()
+        
+        for i, line in enumerate(lines):
+            # Track text variable names
+            if 'Text(' in line and '=' in line:
+                var_name = line.split('=')[0].strip()
+                text_vars.add(var_name)
+            
+            # If we see a new text being created and we have existing text, add fadeout
+            if 'Text(' in line and '=' in line and len(text_vars) > 1:
+                # Get the new text variable
+                new_var = line.split('=')[0].strip()
+                
+                # Add fadeout for previous text variables before this line
+                for var in list(text_vars):
+                    if var != new_var:
+                        fadeout_line = f"        # Remove previous text to prevent overlap"
+                        new_lines.append(fadeout_line)
+                        fadeout_line = f"        self.play(FadeOut({var}), run_time=0.3)"
+                        new_lines.append(fadeout_line)
+                        text_vars.remove(var)
+                        break
+            
+            new_lines.append(line)
+        
+        result = '\n'.join(new_lines)
+        if len(text_vars) > 1:
+            logger.info(f"Fixed potential text overlaps for variables: {text_vars}")
+        
+        return result
 
 class OpenAIProvider(AIProvider):
     def __init__(self):
@@ -150,7 +211,7 @@ IMPLEMENTATION REQUIREMENTS:
 2. Every self.play() must have explicit run_time parameter
 3. All objects must be positioned within video frame boundaries
 4. Create smooth, professional animations with proper pacing
-5. Include strategic wait times for natural rhythm
+5. Include strategic wait times for natural rhythm (MINIMUM 0.1 seconds - NEVER use 0.0)
 6. Use appropriate colors and object sizes for clear visibility
 7. Ensure all elements work without LaTeX dependencies
 8. Add timing calculation comments in the code
@@ -182,7 +243,68 @@ Generate complete, optimized Manim code with precise {duration}-second duration.
             cleaned_lines.append(line)
         
         code = '\n'.join(cleaned_lines)
+        
+        # Fix invalid wait durations that cause Manim errors
+        code = self._fix_wait_durations(code)
+        
+        # Fix text overlap issues
+        code = self._fix_text_overlaps(code)
+        
         return code.strip()
+    
+    def _fix_wait_durations(self, code: str) -> str:
+        """Fix invalid wait durations that cause Manim rendering errors"""
+        import re
+        
+        # Pattern to find self.wait(0.0) or self.wait(0)
+        wait_pattern = r'self\.wait\(0(?:\.0+)?\)'
+        
+        # Replace with minimum valid duration
+        code = re.sub(wait_pattern, 'self.wait(0.1)', code)
+        
+        # Also check for negative wait times
+        negative_wait_pattern = r'self\.wait\(-[0-9.]+\)'
+        code = re.sub(negative_wait_pattern, 'self.wait(0.1)', code)
+        
+        logger.info("Fixed invalid wait durations in generated code")
+        return code
+    
+    def _fix_text_overlaps(self, code: str) -> str:
+        """Add automatic text cleanup to prevent overlapping text issues"""
+        lines = code.split('\n')
+        
+        # Find text creation patterns and add cleanup
+        new_lines = []
+        text_vars = set()
+        
+        for i, line in enumerate(lines):
+            # Track text variable names
+            if 'Text(' in line and '=' in line:
+                var_name = line.split('=')[0].strip()
+                text_vars.add(var_name)
+            
+            # If we see a new text being created and we have existing text, add fadeout
+            if 'Text(' in line and '=' in line and len(text_vars) > 1:
+                # Get the new text variable
+                new_var = line.split('=')[0].strip()
+                
+                # Add fadeout for previous text variables before this line
+                for var in list(text_vars):
+                    if var != new_var:
+                        fadeout_line = f"        # Remove previous text to prevent overlap"
+                        new_lines.append(fadeout_line)
+                        fadeout_line = f"        self.play(FadeOut({var}), run_time=0.3)"
+                        new_lines.append(fadeout_line)
+                        text_vars.remove(var)
+                        break
+            
+            new_lines.append(line)
+        
+        result = '\n'.join(new_lines)
+        if len(text_vars) > 1:
+            logger.info(f"Fixed potential text overlaps for variables: {text_vars}")
+        
+        return result
 
 # System prompts for different libraries
 
@@ -225,25 +347,31 @@ FRAME POSITIONING SYSTEM:
 - Safe positioning: .move_to(ORIGIN), .shift(LEFT*2), .shift(UP*1.5)
 - Group objects: VGroup() to animate together
 
-🚨 CRITICAL: TEXT POSITIONING & ALIGNMENT
-- **DEFAULT POSITIONING**: Unless specifically requested otherwise, CENTER all main text using .move_to(ORIGIN)
-- **USER-SPECIFIED ALIGNMENT**: If prompt mentions "left", "right", "center", or specific positioning, follow it exactly
-- **CONTEXTUAL ALIGNMENT**: 
-  * Titles/headers → CENTER (.move_to(ORIGIN))
-  * Labels for objects → Use .next_to() relative to the object
-  * Body text → CENTER unless prompt specifies otherwise
-  * Multiple text elements → Distribute evenly with proper spacing
-- **PREVENT OVERLAPPING**: NEVER place text/labels on top of each other
-- **SPACING RULES**: Maintain minimum 1.5 unit spacing between text elements
-- **POSITIONING METHODS**:
-  * Center: text.move_to(ORIGIN)
-  * Left align: text.move_to(LEFT * 3)
-  * Right align: text.move_to(RIGHT * 3)
-  * Relative: text.next_to(object, UP/DOWN/LEFT/RIGHT, buff=0.5)
-- **MULTI-TEXT LAYOUT**: Distribute evenly around objects or use UP*2, DOWN*2 for vertical stacking
+🚨 CRITICAL: TEXT POSITIONING & OVERLAP PREVENTION
+- **ALWAYS REMOVE OLD TEXT**: Use FadeOut() or Unwrite() to remove previous text before showing new text
+- **NO SIMULTANEOUS TEXT**: Only one text element should be visible in the same screen area at a time
+- **CLEAR TRANSITIONS**: 
+  * Old text → FadeOut(old_text, run_time=0.5)
+  * Wait briefly → self.wait(0.2) 
+  * New text → FadeIn(new_text, run_time=0.5)
+- **POSITIONING STRATEGY**:
+  * Use consistent positions (e.g., always UP*2 for titles)
+  * Use .move_to(ORIGIN) for centered text
+  * Use .move_to(UP*2) for top text, .move_to(DOWN*2) for bottom text
+- **PREVENT OVERLAPPING**: 
+  * NEVER place multiple text elements in same location
+  * Remove existing text before adding new text at same position
+  * Use ReplacementTransform(old_text, new_text) for text changes
+- **SPACING RULES**: Minimum 2 unit spacing between simultaneous text elements
+- **TEXT LIFECYCLE**: Create → Use → Remove → Create Next (never accumulate text)
 
-🎨 VISUAL DESIGN EXCELLENCE:
-- Use contrasting colors for better visibility (dark text on light objects, vice versa)
+🎨 VISUAL DESIGN EXCELLENCE & COLOR SCHEME:
+- **DEFAULT COLOR SCHEME**: 
+  * Background: BLACK (default manim background - DO NOT change)
+  * Text color: WHITE (unless user specifies otherwise)
+  * Objects: Use vibrant colors (RED, BLUE, GREEN, YELLOW, PURPLE, ORANGE)
+- **USER-SPECIFIED COLORS**: If user mentions specific colors, follow their request exactly
+- **CONTRAST RULES**: Ensure text is always readable against background
 - Apply consistent font sizes (font_size=24 for labels, font_size=36 for titles)
 - Create visual balance with symmetric or strategic asymmetric layouts
 - Use color psychology: RED for attention, BLUE for calm, GREEN for positive
@@ -264,6 +392,7 @@ OPTIMIZED ANIMATION STRUCTURE:
 - Clean, readable code with logical flow and clear comments
 - **RESPECT USER INTENT**: Follow user's specific alignment/positioning requests exactly
 - **DEFAULT TO CENTER**: When no alignment specified, center main text using .move_to(ORIGIN)
+- **DEFAULT COLORS**: Use WHITE text (color=WHITE) on BLACK background unless user specifies colors
 - Proper object positioning within frame boundaries
 - NO OVERLAPPING TEXT OR LABELS - ensure all text is readable
 - Use .next_to() for label positioning relative to objects
@@ -274,7 +403,7 @@ OPTIMIZED ANIMATION STRUCTURE:
 - Professional animation pacing with natural rhythm
 - Use VGroup() to group related objects for synchronized animations
 - Apply run_time parameters that feel natural (0.5s for quick, 2s for dramatic)
-- Include brief pauses (self.wait(0.3)) for emphasis and clarity
+- Include brief pauses (self.wait(0.3)) for emphasis and clarity (NEVER self.wait(0.0))
 
 🚨 ANIMATION SYNTAX RULES:
 - Use FadeOut(object) for exit animations - NEVER object.fade_out()
@@ -312,61 +441,49 @@ EXAMPLE FOR 5-SECOND ANIMATION:
 - Phase 3: self.play(FadeOut(obj2), run_time=1.0)  # 1 second
 - Total: 1.0 + 0.5 + 2.0 + 0.5 + 1.0 = 5.0 seconds EXACTLY
 
-DURATION-PERFECT EXAMPLE WITH PROPER TEXT ALIGNMENT (5 seconds):
+PERFECT TEXT MANAGEMENT EXAMPLE (5 seconds):
 from manim import *
 
 class AnimationScene(Scene):
     def construct(self):
-        # EXAMPLE 1: Main title - DEFAULT TO CENTER
-        title = Text("Animation Title", font_size=36, color=WHITE).move_to(ORIGIN)
-        
-        # EXAMPLE 2: Objects with relative labels
-        circle = Circle(radius=1, color=BLUE).shift(LEFT*2)
-        square = Square(side_length=1.5, color=RED).shift(RIGHT*2)
-        
-        # EXAMPLE 3: Labels positioned relative to objects (NOT centered)
-        circle_label = Text("Circle", font_size=24).next_to(circle, UP, buff=0.5)
-        square_label = Text("Square", font_size=24).next_to(square, DOWN, buff=0.5)
-        
-        # Phase 1: Entrance with labels (1.0 seconds)
-        self.play(
-            FadeIn(circle), 
-            FadeIn(circle_label),
-            run_time=1.0
-        )
-        
-        # Phase 2: Wait (0.5 seconds)
+        # Phase 1: Show first text (1.5s)
+        title1 = Text("Step 1: Initialize", font_size=36, color=WHITE).move_to(ORIGIN)
+        self.play(FadeIn(title1), run_time=1.0)
         self.wait(0.5)
         
-        # Phase 3: Main animation with label movement (2.0 seconds)
-        self.play(
-            Transform(circle, square),
-            Transform(circle_label, square_label),
-            run_time=2.0
-        )
+        # Phase 2: Replace with second text - NO OVERLAP! (1.5s)
+        title2 = Text("Step 2: Process", font_size=36, color=WHITE).move_to(ORIGIN)
+        self.play(FadeOut(title1), run_time=0.3)  # Remove old text first
+        self.wait(0.2)  # Brief pause
+        self.play(FadeIn(title2), run_time=1.0)  # Add new text
         
-        # Phase 4: Wait (0.5 seconds)
-        self.wait(0.5)
+        # Phase 3: Replace with final text - NO OVERLAP! (1.5s)
+        title3 = Text("Step 3: Complete", font_size=36, color=WHITE).move_to(ORIGIN)
+        self.play(FadeOut(title2), run_time=0.3)  # Remove old text first
+        self.wait(0.2)  # Brief pause
+        self.play(FadeIn(title3), run_time=1.0)  # Add new text
         
-        # Phase 5: Exit with CORRECT syntax (1.0 seconds)
-        self.play(
-            FadeOut(square), 
-            FadeOut(square_label), 
-            run_time=1.0
-        )
+        # Phase 4: Clean exit (0.5s)
+        self.play(FadeOut(title3), run_time=0.5)
         
-        # Total: 1.0 + 0.5 + 2.0 + 0.5 + 1.0 = 5.0 seconds EXACTLY
+        # Total: 1.5 + 1.5 + 1.5 + 0.5 = 5.0 seconds EXACTLY
 
 FORBIDDEN ELEMENTS (WILL CAUSE ERRORS):
 - MathTex(), Tex(), Mathematical notation
 - Coordinate systems, axes, number lines
 - LaTeX syntax or mathematical formulas
 - Elements positioned outside frame boundaries
-- OVERLAPPING TEXT OR LABELS (major visual issue!)
+- OVERLAPPING TEXT OR LABELS (CRITICAL ERROR - ALWAYS FADE OUT OLD TEXT FIRST!)
+- Multiple Text objects visible simultaneously in same area
+- Text accumulation without removal (creates visual mess)
 - Text positioned without proper spacing
 - Labels that cover or interfere with objects
 - Multiple text elements at same position
 - Overly complex or messy animations
+- INVALID WAIT DURATIONS:
+  • self.wait(0.0) - CAUSES MANIM ERROR! Use self.wait(0.1) minimum
+  • self.wait(0) - CAUSES MANIM ERROR! Use self.wait(0.1) minimum
+  • Any negative wait durations
 - INVALID METHOD CALLS:
   • object.fade_out() - DOESN'T EXIST
   • object.fade_in() - DOESN'T EXIST  
@@ -380,9 +497,12 @@ CRITICAL OUTPUT REQUIREMENTS:
 - NO explanations outside the code
 - Code must be complete and runnable
 - All objects must stay within frame boundaries
-- ENSURE NO TEXT/LABELS OVERLAP - use .next_to() with proper buff spacing
-- Position all text elements with minimum 1.5 unit separation
-- Use buff=0.5 or greater in .next_to() calls for text spacing
+- **MANDATORY TEXT MANAGEMENT**: Always FadeOut old text before FadeIn new text
+- **NO TEXT ACCUMULATION**: Only one text element per screen area at any time
+- **CLEAN TRANSITIONS**: old_text → FadeOut → wait(0.2) → new_text → FadeIn
+- Use ReplacementTransform for text changes instead of overlapping
+- Position all text elements with minimum 2 unit separation if simultaneous
+- Use buff=1.0 or greater in .next_to() calls for text spacing
 - Animation must be smooth and professional
 - Total duration must match requirements EXACTLY
 - Include timing comments in code showing duration calculation

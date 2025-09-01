@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react'
+import { Fragment } from 'react'
 import { Menu, MenuButton, MenuItem, MenuItems, Transition } from '@headlessui/react'
 import { 
   UserCircleIcon, 
@@ -10,7 +10,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
 export default function UserDropdown() {
-  const { user, profile, signOut } = useAuth()
+  const { user, signOut } = useAuth()
   const navigate = useNavigate()
 
   if (!user) return null
@@ -21,31 +21,21 @@ export default function UserDropdown() {
   }
 
   const getDisplayName = () => {
-    return profile?.display_name || user.email?.split('@')[0] || 'User'
+    return user.email?.split('@')[0] || 'User'
   }
 
   const getInitials = () => {
     const name = getDisplayName()
-    return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2)
+    return name.split(' ').map((word: string) => word[0]).join('').toUpperCase().slice(0, 2)
   }
 
   return (
     <Menu as="div" className="relative inline-block text-left">
       <div>
         <MenuButton className="inline-flex w-full justify-center items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-          {profile?.avatar_url ? (
-            <img
-              className="h-8 w-8 rounded-full"
-              src={profile.avatar_url}
-              alt={getDisplayName()}
-            />
-          ) : (
-            <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
-              <span className="text-xs font-medium text-white">
-                {getInitials()}
-              </span>
-            </div>
-          )}
+          <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
+            <span className="text-white text-sm font-medium">{getInitials()}</span>
+          </div>
           <span className="hidden sm:block ml-2">{getDisplayName()}</span>
           <ChevronDownIcon className="-mr-1 h-5 w-5 text-gray-400" aria-hidden="true" />
         </MenuButton>

@@ -29,49 +29,63 @@ async def create_scene(
     current_user: UserResponse = Depends(get_current_user)
 ):
     """Create a new animation scene"""
-    # Store original prompt
-    original_prompt = request.prompt
-    final_prompt = request.prompt
-    
-    # Enhance prompt if requested
-    if request.use_enhanced_prompt:
-        try:
-            logger.info(f"Enhancing prompt for {request.library}: {original_prompt}")
-            final_prompt = await enhancement_service.enhance_prompt(
-                original_prompt=original_prompt,
-                library=request.library,
-                duration=request.duration,
-                style=request.style or {}
-            )
-            logger.info(f"Enhanced prompt: {final_prompt}")
-        except Exception as e:
-            logger.error(f"Prompt enhancement failed: {e}")
-            # Continue with original prompt if enhancement fails
-            final_prompt = original_prompt
-    
-    # Create scene object with enhanced prompt and user ID
-    scene = Scene(
-        prompt=final_prompt,
-        original_prompt=original_prompt,
-        library=request.library,
-        duration=request.duration,
-        resolution=request.resolution,
-        metadata={"style": request.style, "user_id": current_user.id}
-    )
-    
-    # Save scene
-    scene = await scene_service.create_scene(scene)
-    
-    # Add to processing queue
-    await job_queue.add_job(scene.id)
-    
-    return SceneResponse(
-        id=scene.id,
-        status=scene.status,
-        message="Scene generation started",
-        original_prompt=scene.original_prompt,
-        enhanced_prompt=scene.prompt if request.use_enhanced_prompt else None
-    )
+    try:
+        logger.info(f"Creating scene for user {current_user.id} with prompt: {request.prompt}")
+        
+        # Store original prompt
+        original_prompt = request.prompt
+        final_prompt = request.prompt
+        
+        # Enhance prompt if requested
+        if request.use_enhanced_prompt:
+            try:
+                logger.info(f"Enhancing prompt for {request.library}: {original_prompt}")
+                final_prompt = await enhancement_service.enhance_prompt(
+                    original_prompt=original_prompt,
+                    library=request.library,
+                    duration=request.duration,
+                    style=request.style or {}
+                )
+                logger.info(f"Enhanced prompt: {final_prompt}")
+            except Exception as e:
+                logger.error(f"Prompt enhancement failed: {e}")
+                # Continue with original prompt if enhancement fails
+                final_prompt = original_prompt
+        
+        # Create scene object with enhanced prompt and user ID
+        scene = Scene(
+            prompt=final_prompt,
+            original_prompt=original_prompt,
+            library=request.library,
+            duration=request.duration,
+            resolution=request.resolution,
+            metadata={"style": request.style, "user_id": current_user.id}
+        )
+        
+        logger.info(f"Created scene object with ID: {scene.id}")
+        
+        # Save scene
+        scene = await scene_service.create_scene(scene)
+        logger.info(f"Scene saved to storage: {scene.id}")
+        
+        # Add to processing queue
+        await job_queue.add_job(scene.id)
+        logger.info(f"Scene added to processing queue: {scene.id}")
+        
+        return SceneResponse(
+            id=scene.id,
+            status=scene.status,
+            message="Scene generation started",
+            original_prompt=scene.original_prompt,
+            enhanced_prompt=scene.prompt if request.use_enhanced_prompt else None
+        )
+        
+    except Exception as e:
+        logger.error(f"Scene creation failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Scene creation failed: {str(e)}"
+        )
 
 @router.get("/{scene_id}", response_model=SceneResponse)
 async def get_scene(
@@ -320,3 +334,190 @@ async def check_scene_health(
     except Exception as e:
         logger.error(f"Error checking scene health {scene_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
+
+@router.post("/{scene_id}/duplicate", response_model=SceneResponse)
+async def duplicate_scene(
+    scene_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Duplicate an existing scene"""
+    try:
+        # Get original scene
+        original_scene = await scene_service.get_scene(scene_id)
+        
+        if not original_scene:
+            raise HTTPException(status_code=404, detail="Scene not found")
+        
+        # Check ownership
+        scene_user_id = original_scene.metadata.get("user_id")
+        is_migration_user = scene_user_id == "migration-user"
+        is_owner = scene_user_id == current_user.id
+        
+        if not (is_migration_user or is_owner):
+            raise HTTPException(status_code=404, detail="Scene not found")
+        
+        # Create new scene based on original
+        new_scene = Scene(
+            prompt=original_scene.prompt,
+            original_prompt=original_scene.original_prompt,
+            library=original_scene.library,
+            duration=original_scene.duration,
+            resolution=original_scene.resolution,
+            metadata={
+                **original_scene.metadata,
+                "user_id": current_user.id,
+                "duplicated_from": scene_id
+            }
+        )
+        
+        logger.info(f"Duplicating scene {scene_id} as {new_scene.id} for user {current_user.id}")
+        
+        # Save new scene
+        new_scene = await scene_service.create_scene(new_scene)
+        
+        # Add to processing queue
+        await job_queue.add_job(new_scene.id)
+        
+        return SceneResponse(
+            id=new_scene.id,
+            status=new_scene.status,
+            message="Scene duplication started",
+            original_prompt=new_scene.original_prompt,
+            enhanced_prompt=new_scene.prompt if new_scene.original_prompt else None
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Scene duplication failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Scene duplication failed: {str(e)}"
+        )
+
+@router.get("/{scene_id}/properties", response_model=dict)
+async def get_scene_properties(
+    scene_id: str,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Get detailed scene properties and metadata"""
+    try:
+        scene = await scene_service.get_scene(scene_id)
+        
+        if not scene:
+            raise HTTPException(status_code=404, detail="Scene not found")
+        
+        # Check ownership
+        scene_user_id = scene.metadata.get("user_id")
+        is_migration_user = scene_user_id == "migration-user"
+        is_owner = scene_user_id == current_user.id
+        
+        if not (is_migration_user or is_owner):
+            raise HTTPException(status_code=404, detail="Scene not found")
+        
+        # Return comprehensive scene properties
+        return {
+            "id": scene.id,
+            "prompt": scene.prompt,
+            "original_prompt": scene.original_prompt,
+            "library": scene.library,
+            "duration": scene.duration,
+            "resolution": scene.resolution,
+            "status": scene.status,
+            "error": scene.error,
+            "created_at": scene.created_at.isoformat(),
+            "updated_at": scene.updated_at.isoformat(),
+            "metadata": scene.metadata,
+            "has_video": bool(scene.video_path),
+            "has_code": bool(scene.generated_code),
+            "video_path": scene.video_path,
+            "file_size": Path(scene.video_path).stat().st_size if scene.video_path and Path(scene.video_path).exists() else None
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting scene properties {scene_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get scene properties: {str(e)}")
+
+@router.put("/{scene_id}", response_model=SceneResponse)
+async def update_scene(
+    scene_id: str,
+    request: dict,
+    background_tasks: BackgroundTasks,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Update scene properties"""
+    try:
+        scene = await scene_service.get_scene(scene_id)
+        
+        if not scene:
+            raise HTTPException(status_code=404, detail="Scene not found")
+        
+        # Check ownership
+        if scene.metadata.get("user_id") != current_user.id:
+            raise HTTPException(status_code=404, detail="Scene not found")
+        
+        # Update allowed fields
+        updated = False
+        regenerate_needed = False
+        
+        if "duration" in request and request["duration"] != scene.duration:
+            scene.duration = request["duration"]
+            updated = True
+            regenerate_needed = True
+        
+        if "resolution" in request and request["resolution"] != scene.resolution:
+            scene.resolution = request["resolution"]
+            updated = True
+            regenerate_needed = True
+        
+        if "prompt" in request and request["prompt"] != scene.prompt:
+            # If original prompt exists, update it too
+            if scene.original_prompt:
+                scene.original_prompt = request["prompt"]
+            scene.prompt = request["prompt"]
+            updated = True
+            regenerate_needed = True
+        
+        if not updated:
+            return SceneResponse(
+                id=scene.id,
+                status=scene.status,
+                message="No changes made",
+                original_prompt=scene.original_prompt,
+                enhanced_prompt=scene.prompt if scene.original_prompt else None
+            )
+        
+        # Save changes
+        await scene_service.update_scene(scene)
+        
+        # If regeneration is needed, trigger it
+        if regenerate_needed and request.get("auto_regenerate", True):
+            scene.status = SceneStatus.PENDING
+            scene.error = None
+            scene.generated_code = None
+            scene.video_path = None
+            await scene_service.update_scene(scene)
+            await job_queue.add_job(scene.id)
+            message = "Scene updated and regeneration started"
+        else:
+            message = "Scene updated successfully"
+        
+        return SceneResponse(
+            id=scene.id,
+            status=scene.status,
+            message=message,
+            original_prompt=scene.original_prompt,
+            enhanced_prompt=scene.prompt if scene.original_prompt else None
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Scene update failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Scene update failed: {str(e)}"
+        )
